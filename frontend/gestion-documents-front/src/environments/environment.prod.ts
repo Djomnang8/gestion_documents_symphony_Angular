@@ -20,9 +20,9 @@
   apiUrl: 'https://gestiondocumentssymphony.infinityfreeapp.com/api',
 };*/
 
-// src/environments/environment.prod.ts
+// frontend/gestion-documents-front/src/environments/environment.prod.ts
 export const environment = {
   production: true,
-  apiUrl: 'backend-api-production-5166.up.railway.app',
+  // Ajoutez bien le https:// et le /api à la fin
+  apiUrl: 'https://backend-api-production-5166.up.railway.app/api',
 };
-
