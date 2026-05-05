@@ -15,7 +15,14 @@
 };*/
 
 // src/environments/environment.prod.ts
-export const environment = {
+/*export const environment = {
   production: true,
   apiUrl: 'https://gestiondocumentssymphony.infinityfreeapp.com/api',
+};*/
+
+// src/environments/environment.prod.ts
+export const environment = {
+  production: true,
+  // Remplacez 'backend-api.up.railway.app' par l'URL réelle fournie par Railway
+  apiUrl: 'backend-api-production-5166.up.railway.app',
 };

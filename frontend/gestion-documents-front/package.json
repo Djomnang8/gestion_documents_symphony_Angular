@@ -9,7 +9,7 @@
     "test": "ng test",
     "serve:ssr:gestion-documents-front": "node dist/gestion-documents-front/server/server.mjs",
     "build:mobile": "ng build --configuration production && cp dist/gestion-documents-front/browser/index.csr.html dist/gestion-documents-front/browser/index.html",
-    "deploy": "ng build --base-href=/https://github.com/Djomnang8/gestion_documents_symphony_Angular/ && ngh"
+    
 
   },
   "private": true,
