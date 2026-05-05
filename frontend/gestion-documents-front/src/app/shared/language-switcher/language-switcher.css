@@ -1,0 +1,68 @@
+/* src/app/shared/language-switcher/language-switcher.css */
+
+.lang-switcher {
+  display: inline-flex;
+  align-items: center;
+}
+
+.lang-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: rgba(255, 255, 255, 0.92);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23555' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 30px;
+  padding: 6px 28px 6px 10px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  min-width: 110px;
+  line-height: 1.4;
+}
+
+.lang-select:hover {
+  border-color: #2ECC71;
+  box-shadow: 0 0 0 2px rgba(46, 204, 113, 0.12);
+}
+
+.lang-select:focus {
+  border-color: #2ECC71;
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.18);
+}
+
+/* ── Contexte navbar publique (fond clair) ────────────── */
+.citizen-lang-switcher .lang-select {
+  background-color: rgba(255, 255, 255, 0.95);
+  color: #2C3E50;
+}
+
+/* ── Contexte page login (panneau droit blanc) ────────── */
+.login-lang-switcher .lang-select {
+  background-color: #fff;
+  border-color: #e0e0e0;
+  color: #444;
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE ≤ 500px
+   ══════════════════════════════════════ */
+@media (max-width: 500px) {
+  .lang-select {
+    font-size: 0.75rem;
+    padding: 5px 22px 5px 8px;
+    min-width: 90px;
+    background-position: right 6px center;
+  }
+  .login-lang-switcher {
+    top: 8px !important;
+    right: 8px !important;
+  }
+  .citizen-lang-switcher .lang-select {
+    min-width: 80px;
+  }
+}

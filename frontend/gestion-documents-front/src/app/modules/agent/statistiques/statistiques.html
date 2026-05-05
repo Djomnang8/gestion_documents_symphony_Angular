@@ -1,0 +1,202 @@
+<!-- src/app/modules/agent/statistiques/statistiques.html -->
+<div class="stats-wrapper">
+
+  <!-- ─── PAGE HEADER ──────────────────────────────────────── -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 class="page-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="12" width="4" height="9" rx="1" fill="#1565C0"/>
+          <rect x="10" y="7" width="4" height="14" rx="1" fill="#5E35B1"/>
+          <rect x="17" y="3" width="4" height="18" rx="1" fill="#43A047"/>
+        </svg>
+        Statistiques documentaires
+      </h1>
+      <p class="page-subtitle">Analyse de performance · {{ labelPeriode() }}</p>
+    </div>
+    <div class="page-header-right">
+      <button class="btn-export btn-pdf" (click)="exporterPdf()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        Rapport PDF
+      </button>
+      <button class="btn-export btn-excel" (click)="exporterExcel()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="8 17 12 21 16 17"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/>
+        </svg>
+        Exporter Excel
+      </button>
+    </div>
+  </div>
+
+  <!-- ─── BARRE DE FILTRES ─────────────────────────────────── -->
+  <div class="filtres-barre">
+    <div class="filtres-groupe">
+      <label class="filtre-label">Période</label>
+      <div class="periode-tabs">
+        <button
+          *ngFor="let p of periodes"
+          class="periode-btn"
+          [class.active]="periode === p.value"
+          (click)="periode = p.value; charger()">
+          {{ p.label }}
+        </button>
+      </div>
+    </div>
+
+    <div class="filtres-groupe" *ngIf="periode === 'custom'">
+      <label class="filtre-label">Du</label>
+      <input type="date" class="filtre-input" [(ngModel)]="dateDebut" />
+      <label class="filtre-label">Au</label>
+      <input type="date" class="filtre-input" [(ngModel)]="dateFin" />
+      <button class="btn-appliquer" (click)="appliquerFiltres()">Appliquer</button>
+    </div>
+  </div>
+
+  <!-- ─── CHARGEMENT ───────────────────────────────────────── -->
+  <div class="chargement-zone" *ngIf="chargement()">
+    <div class="spinner-stats"></div>
+    <span>Calcul des statistiques…</span>
+  </div>
+
+  <ng-container *ngIf="!chargement() && stats() as s">
+
+    <!-- ─── KPI CARDS ─────────────────────────────────────── -->
+    <div class="kpi-grille">
+
+      <div class="kpi-card kpi-bleu">
+        <div class="kpi-icone-wrap" style="background:#1565C011">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <div class="kpi-corps">
+          <div class="kpi-valeur">{{ s.totalDossiers }}</div>
+          <div class="kpi-label">Total dossiers</div>
+        </div>
+        <div class="kpi-tendance" [ngClass]="getTendanceClass(s.tendanceTotalDossiers)">
+          {{ formatTendance(s.tendanceTotalDossiers) }} vs période préc.
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-vert">
+        <div class="kpi-icone-wrap" style="background:#43A04711">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#43A047" stroke-width="2">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <div class="kpi-corps">
+          <div class="kpi-valeur">{{ s.tauxTraitement }}<span class="kpi-unite">%</span></div>
+          <div class="kpi-label">Taux de traitement</div>
+        </div>
+        <div class="kpi-tendance" [ngClass]="getTendanceClass(s.tendanceTauxTraitement)">
+          {{ formatTendance(s.tendanceTauxTraitement) }} vs période préc.
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-ambre">
+        <div class="kpi-icone-wrap" style="background:#FFB30011">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFB300" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="kpi-corps">
+          <div class="kpi-valeur">{{ s.delaiMoyen }}<span class="kpi-unite">j</span></div>
+          <div class="kpi-label">Délai moyen</div>
+        </div>
+        <div class="kpi-tendance" [ngClass]="getTendanceClass(-s.tendanceDelaiMoyen)">
+          {{ formatTendance(s.tendanceDelaiMoyen) }} vs période préc.
+        </div>
+      </div>
+
+      <div class="kpi-card kpi-rouge">
+        <div class="kpi-icone-wrap" style="background:#E5393511">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#E53935" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <div class="kpi-corps">
+          <div class="kpi-valeur">{{ s.tauxRejet }}<span class="kpi-unite">%</span></div>
+          <div class="kpi-label">Taux de rejet</div>
+        </div>
+        <div class="kpi-tendance" [ngClass]="getTendanceClass(-s.tendanceTauxRejet)">
+          {{ formatTendance(s.tendanceTauxRejet) }} vs période préc.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ─── GRILLE GRAPHIQUES 2×2 ─────────────────────────── -->
+    <div class="graphiques-grille">
+
+      <!-- [1] Barres groupées -->
+      <div class="graph-card">
+        <div class="graph-header">
+          <span class="graph-titre">Dossiers par statut</span>
+          <span class="graph-badge" style="background:#1565C011;color:#1565C0">Barres</span>
+        </div>
+        <div class="graph-body">
+          <canvas #canvasBarres></canvas>
+        </div>
+      </div>
+
+      <!-- [2] Camembert -->
+      <div class="graph-card">
+        <div class="graph-header">
+          <span class="graph-titre">Répartition par service</span>
+          <span class="graph-badge" style="background:#5E35B111;color:#5E35B1">Secteurs</span>
+        </div>
+        <div class="graph-body">
+          <canvas #canvasCamembert></canvas>
+        </div>
+      </div>
+
+      <!-- [3] Courbe délai -->
+      <div class="graph-card">
+        <div class="graph-header">
+          <span class="graph-titre">Délai moyen de traitement</span>
+          <span class="graph-badge" style="background:#FFB30011;color:#FFB300">jours · seuil 7j</span>
+        </div>
+        <div class="graph-body">
+          <canvas #canvasCourbe></canvas>
+        </div>
+      </div>
+
+      <!-- [4] Gauge -->
+      <div class="graph-card">
+        <div class="graph-header">
+          <span class="graph-titre">Indicateur de rejet</span>
+          <span class="graph-badge"
+            [style.background]="s.tauxRejet > 20 ? '#E5393511' : '#43A04711'"
+            [style.color]="s.tauxRejet > 20 ? '#E53935' : '#43A047'">
+            {{ s.tauxRejet > 20 ? '⚠ Critique' : '✓ Normal' }}
+          </span>
+        </div>
+        <div class="graph-body graph-body--gauge">
+          <canvas #canvasGauge></canvas>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ─── GRAPHIQUE PLEINE LARGEUR [5] ──────────────────── -->
+    <div class="graph-card graph-card--full">
+      <div class="graph-header">
+        <span class="graph-titre">Évolution mensuelle des dossiers</span>
+        <span class="graph-badge" style="background:#1565C011;color:#1565C0">12 mois · Aire</span>
+      </div>
+      <div class="graph-body">
+        <canvas #canvasAire></canvas>
+      </div>
+    </div>
+
+  </ng-container>
+
+</div>

@@ -1,0 +1,206 @@
+<div class="page-suivi">
+  <app-navbar-public></app-navbar-public>
+
+  <div class="suivi-container">
+
+    <!-- BARRE DE RECHERCHE -->
+    <div class="recherche-section">
+      <h1 class="recherche-titre">{{ 'suivi.titre' | translate }}</h1>
+      <p class="recherche-description">
+        {{ 'suivi.description' | translate }}
+      </p>
+      <div class="recherche-barre">
+        <div class="recherche-input-wrapper">
+          <svg class="recherche-icone" viewBox="0 0 20 20"
+               fill="currentColor" width="20">
+            <path fill-rule="evenodd"
+                  d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89
+                     3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816
+                     A6 6 0 012 8z"
+                  clip-rule="evenodd"/>
+          </svg>
+          <!--
+            CORRECTIF : on utilise [value] + (input) au lieu de [(ngModel)] seul.
+            Cela force Angular à détecter les changements à chaque frappe,
+            sans dépendre du mécanisme de change detection de ngModel.
+          -->
+          <input type="text"
+                 [value]="numeroDossier"
+                 (input)="onNumeroDossierChange($any($event.target).value)"
+                 (keyup.enter)="rechercher()"
+                 placeholder="Ex : DOS-2024-00001"
+                 class="recherche-input">
+        </div>
+        <button class="btn-rechercher"
+                (click)="rechercher()"
+                [disabled]="enCours || !numeroDossier.trim()">
+          <span class="spinner" *ngIf="enCours"></span>
+          <span *ngIf="!enCours">{{ 'suivi.btn_rechercher' | translate }}</span>
+          <span *ngIf="enCours">{{ 'common.chargement' | translate }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ERREUR -->
+    <div class="alerte-erreur" *ngIf="erreur">
+      <svg viewBox="0 0 20 20" fill="currentColor" width="20">
+        <path fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1
+                 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0
+                 00-1-1z"
+              clip-rule="evenodd"/>
+      </svg>
+      {{ 'suivi.erreur_introuvable' | translate }}
+    </div>
+
+    <!-- RÉSULTATS -->
+    <div class="resultat-section" *ngIf="dossier">
+
+      <!-- EN-TÊTE DU DOSSIER -->
+      <div class="dossier-entete">
+        <div class="dossier-info">
+          <div class="dossier-numero">{{ dossier.numero }}</div>
+          <h2 class="dossier-titre">{{ dossier.titre }}</h2>
+          <p class="dossier-citoyen">{{ 'suivi.depose_par' | translate }} {{ dossier.nomCitoyen }}</p>
+          <p class="dossier-date">
+            {{ 'suivi.le' | translate }} {{ formatDate(dossier.dateDepot) }}
+          </p>
+        </div>
+        <div class="dossier-statut-actuel">
+          <div class="statut-grand"
+               [style.background]="getStatutConfig(dossier.statut).couleur + '18'"
+               [style.color]="getStatutConfig(dossier.statut).couleur"
+               [style.border-color]="getStatutConfig(dossier.statut).couleur + '40'">
+            <span class="statut-icone">
+              {{ getStatutConfig(dossier.statut).icone }}
+            </span>
+            <span class="statut-texte">
+              {{ getStatutConfig(dossier.statut).label }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTE REJET -->
+      <div class="alerte-rejet" *ngIf="dossier.statut === 'REJETE'">
+        <div class="rejet-icone">❌</div>
+        <div class="rejet-contenu">
+          <strong>Votre dossier a été rejeté</strong>
+          <p *ngIf="dossier.motifRejet">Motif : {{ dossier.motifRejet }}</p>
+          <p *ngIf="!dossier.motifRejet">
+            Contactez le service pour plus d'informations.
+          </p>
+        </div>
+      </div>
+
+      <!-- BARRE DE PROGRESSION - UNIQUEMENT Reçu, En cours, Terminé -->
+      <div class="progression-section"
+           *ngIf="dossier.statut !== 'REJETE'">
+        <div class="progression-etapes">
+          <div class="etape-progress"
+               *ngFor="let s of statutsOrdonnes; let i = index"
+               [class.actif]="dossier.statut === s"
+               [class.fait]="statutsOrdonnes.indexOf(dossier.statut) > i">
+            <div class="etape-cercle"
+                 [style.background]="(dossier.statut === s ||
+                   statutsOrdonnes.indexOf(dossier.statut) > i)
+                   ? getStatutConfig(s).couleur : '#e0e0e0'"
+                 [style.color]="(dossier.statut === s ||
+                   statutsOrdonnes.indexOf(dossier.statut) > i)
+                   ? 'white' : '#bbb'">
+              <span *ngIf="statutsOrdonnes.indexOf(dossier.statut) > i">✓</span>
+              <span *ngIf="statutsOrdonnes.indexOf(dossier.statut) <= i">
+                {{ i + 1 }}
+              </span>
+            </div>
+            <div class="etape-label">
+              {{ 'suivi.statut_' + s | translate }}
+            </div>
+            <div class="etape-ligne"
+                 *ngIf="i < statutsOrdonnes.length - 1"
+                 [style.background]="statutsOrdonnes.indexOf(dossier.statut) > i
+                   ? getStatutConfig(s).couleur : '#e0e0e0'">
+            </div>
+          </div>
+        </div>
+        <div class="progression-barre-wrapper">
+          <div class="progression-barre-fond">
+            <div class="progression-barre-remplie"
+                 [style.width]="getProgressPourcentage() + '%'">
+            </div>
+          </div>
+          <span class="progression-pourcent">
+            {{ getProgressPourcentage() }}% {{ 'suivi.progression' | translate }}
+          </span>
+        </div>
+      </div>
+
+      <!-- TIMELINE HISTORIQUE -->
+      <div class="historique-section">
+        <h3 class="historique-titre">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="18">
+            <path fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0
+                     10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0
+                     101.415-1.415L11 9.586V6z"
+                  clip-rule="evenodd"/>
+          </svg>
+          Historique des traitements
+        </h3>
+
+        <div class="timeline">
+          <!-- CORRECTIF : afficher uniquement "En cours" et "Terminé" -->
+          <div class="timeline-item"
+               *ngFor="let h of getHistoriqueFiltre(); let dernier = last">
+            <div class="timeline-marqueur"
+                 [style.background]="
+                   getStatutConfig(h.nouveauStatut).couleur">
+              <span>{{ getStatutConfig(h.nouveauStatut).icone }}</span>
+            </div>
+            <div class="timeline-ligne"
+                 *ngIf="!dernier"></div>
+            <div class="timeline-contenu">
+              <div class="timeline-en-tete">
+                <span class="timeline-statut"
+                      [style.color]="
+                        getStatutConfig(h.nouveauStatut).couleur">
+                  {{ 'suivi.statut_' + h.nouveauStatut | translate }}
+                </span>
+                <span class="timeline-date">
+                  {{ formatDate(h.dateChangement) }}
+                </span>
+              </div>
+              <p class="timeline-commentaire" *ngIf="h.commentaire">
+                {{ h.commentaire }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ÉTAT VIDE -->
+    <div class="etat-vide" *ngIf="!dossier && !erreur && !enCours">
+      <div class="vide-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#ddd"
+             stroke-width="1.5" width="80">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+      </div>
+      <p>{{ 'suivi.vide_message' | translate }}</p>
+    </div>
+
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer-public">
+    <div class="footer-contenu">
+      <span>© 2024 — Service de Gestion Documentaire</span>
+      <a routerLink="/auth/login" class="lien-agent">
+        Accès agents internes →
+      </a>
+    </div>
+  </footer>
+</div>

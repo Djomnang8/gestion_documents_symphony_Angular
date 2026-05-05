@@ -1,0 +1,302 @@
+<!-- src/app/modules/agent/pages/dossiers/detail-dossier.html -->
+
+<!--
+  CORRECTIF IMPRESSION : le div.print-area enveloppe uniquement le contenu
+  du dossier. Le CSS @media print masquera tout le reste de la page
+  (sidebar, header du dashboard agent) et n'affichera que cette zone.
+-->
+<div class="detail-wrapper print-area">
+
+  <!-- TOAST SUCCÈS -->
+  <div class="toast toast--succes" *ngIf="succes()">✓ {{ succes() }}</div>
+
+  <!-- CHARGEMENT -->
+  <div class="chargement-zone" *ngIf="chargement()">
+    <div class="spinner"></div>
+    <span>Chargement du dossier…</span>
+  </div>
+
+  <!-- ERREUR -->
+  <div class="alerte alerte-erreur" *ngIf="erreur() && !chargement()">⚠ {{ erreur() }}</div>
+
+  <ng-container *ngIf="dossier() as d">
+
+    <!-- NAVIGATION (masqué à l'impression) -->
+    <div class="nav-retour">
+      <a routerLink="/agent/dossiers" class="lien-retour">
+        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" width="16"><path d="M12 4l-6 6 6 6"/></svg>
+        Retour à la liste
+      </a>
+      <button class="btn-imprimer" (click)="imprimerFiche()">🖨 Imprimer la fiche</button>
+    </div>
+
+    <!-- EN-TÊTE DOSSIER -->
+    <div class="dossier-entete">
+      <div class="entete-gauche">
+        <span class="numero-badge">{{ d.numero }}</span>
+        <div>
+          <h1 class="dossier-titre">{{ d.titre }}</h1>
+          <p class="dossier-meta">
+            Service : <strong>{{ d.serviceNom }}</strong>
+            &nbsp;·&nbsp;
+            Déposé le {{ formatDate(d.dateDepot) }}
+          </p>
+        </div>
+      </div>
+      <div class="entete-droite">
+        <span class="badge-statut badge-grand" [ngClass]="getClassStatut(d.statutCode)">
+          {{ d.statutLibelle }}
+        </span>
+      </div>
+    </div>
+
+    <!-- BOUTONS D'ACTIONS STATUT (masqués à l'impression) -->
+    <div class="actions-statut" *ngIf="transitions.length > 0">
+      <span class="actions-label">Actions disponibles :</span>
+      <button
+        *ngFor="let t of transitions"
+        class="btn-transition"
+        [class.btn-danger]="t.danger"
+        [class.btn-success]="t.code === 'TERMINE'"
+        [class.btn-warning]="t.code === 'TRANSFERE'"
+        [class.btn-primary]="t.code === 'EN_COURS'"
+        (click)="ouvrirModalStatut(t.code)">
+        {{ t.label }}
+      </button>
+    </div>
+
+    <!-- ONGLETS (masqués à l'impression) -->
+    <div class="onglets">
+      <button class="onglet" [class.onglet--actif]="onglet() === 'info'" (click)="onglet.set('info')">
+        ℹ Informations
+      </button>
+      <button class="onglet" [class.onglet--actif]="onglet() === 'historique'" (click)="onglet.set('historique')">
+        🕐 Historique ({{ d.historique.length }})
+      </button>
+      <button class="onglet" [class.onglet--actif]="onglet() === 'documents'" (click)="onglet.set('documents')">
+        📎 Documents ({{ d.documents.length }})
+      </button>
+    </div>
+
+    <!-- ─── ONGLET INFORMATIONS ─── -->
+    <div *ngIf="onglet() === 'info'">
+      <div class="grille-details">
+
+        <!-- INFORMATIONS DOSSIER -->
+        <div class="carte-info">
+          <h2 class="carte-titre">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
+            Informations du dossier
+          </h2>
+          <dl class="champs-liste">
+            <div class="champ-item">
+              <dt>Numéro</dt>
+              <dd class="val-mono">{{ d.numero }}</dd>
+            </div>
+            <div class="champ-item">
+              <dt>Titre</dt>
+              <dd>{{ d.titre }}</dd>
+            </div>
+            <div class="champ-item" *ngIf="d.description">
+              <dt>Description</dt>
+              <dd class="val-description">{{ d.description }}</dd>
+            </div>
+            <div class="champ-item">
+              <dt>Statut actuel</dt>
+              <dd><span class="badge-statut" [ngClass]="getClassStatut(d.statutCode)">{{ d.statutLibelle }}</span></dd>
+            </div>
+            <div class="champ-item" *ngIf="d.motifRejet">
+              <dt>Motif de rejet</dt>
+              <dd class="val-danger">{{ d.motifRejet }}</dd>
+            </div>
+            <div class="champ-item">
+              <dt>Date de dépôt</dt>
+              <dd>{{ formatDate(d.dateDepot) }}</dd>
+            </div>
+            <div class="champ-item">
+              <dt>Dernière mise à jour</dt>
+              <dd>{{ formatDate(d.dateMiseAJourStatut) }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <!-- INFORMATIONS CITOYEN -->
+        <div class="carte-info">
+          <h2 class="carte-titre">
+            <svg viewBox="0 0 20 20" fill="currentColor" width="16"><path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg>
+            Informations citoyen
+          </h2>
+          <dl class="champs-liste">
+            <div class="champ-item">
+              <dt>Nom complet</dt>
+              <dd class="val-fort">{{ d.nomCitoyen }}</dd>
+            </div>
+            <div class="champ-item" *ngIf="d.emailCitoyen">
+              <dt>Email</dt>
+              <dd>
+                <a [href]="'mailto:' + d.emailCitoyen" class="lien-contact">
+                  ✉ {{ d.emailCitoyen }}
+                </a>
+              </dd>
+            </div>
+            <div class="champ-item" *ngIf="d.telephoneCitoyen">
+              <dt>Téléphone</dt>
+              <dd>
+                <a [href]="'tel:' + d.telephoneCitoyen" class="lien-contact">
+                  📞 {{ d.telephoneCitoyen }}
+                </a>
+              </dd>
+            </div>
+            <div class="champ-item" *ngIf="!d.emailCitoyen && !d.telephoneCitoyen">
+              <dt>Contact</dt>
+              <dd class="val-vide">Aucun contact renseigné</dd>
+            </div>
+          </dl>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ─── ONGLET HISTORIQUE ─── -->
+    <div *ngIf="onglet() === 'historique'" class="section-carte">
+      <div *ngIf="d.historique.length === 0" class="vide-section">
+        Aucun historique disponible.
+      </div>
+      <div class="timeline" *ngIf="d.historique.length > 0">
+        <div class="timeline-item" *ngFor="let h of d.historique; let last = last">
+          <div class="timeline-point" [ngClass]="getClassStatut(h.nouveauStatut)"></div>
+          <div class="timeline-ligne" *ngIf="!last"></div>
+          <div class="timeline-contenu">
+            <div class="timeline-titre">
+              <span class="timeline-transition" *ngIf="h.ancienStatut && h.ancienStatut !== '—'">
+                {{ h.ancienStatut }} →
+              </span>
+              <strong>{{ h.nouveauStatut }}</strong>
+            </div>
+            <p class="timeline-commentaire" *ngIf="h.commentaire">"{{ h.commentaire }}"</p>
+            <span class="timeline-date">{{ formatDate(h.dateChangement) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+<!-- ─── ONGLET DOCUMENTS ─── -->
+<div *ngIf="onglet() === 'documents'" class="section-carte">
+
+  <div *ngIf="d.documents.length === 0" class="vide-section">
+    <svg viewBox="0 0 20 20" fill="currentColor" width="36" style="opacity:0.3"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/></svg>
+    <p>Aucun document déposé pour ce dossier.</p>
+  </div>
+
+  <div class="docs-grille" *ngIf="d.documents.length > 0">
+    <div class="doc-card" *ngFor="let doc of d.documents">
+
+      <!-- Icône unique pour tous les fichiers (clic pour ouvrir) -->
+      <div class="doc-card__icone" (click)="ouvrirFichier(doc.cheminFichier)">
+        <span class="doc-card__emoji">{{ iconeFichier(doc.nomFichier) }}</span>
+        <span class="doc-card__apercu-label">Cliquer pour ouvrir</span>
+      </div>
+
+      <!-- Infos fichier -->
+      <div class="doc-card__infos">
+        <span class="doc-card__nom" [title]="doc.nomFichier">{{ doc.nomFichier }}</span>
+        <div class="doc-card__meta">
+          <span class="doc-card__version">v{{ doc.numeroVersion }}</span>
+          <span>{{ formatTaille(doc.tailleFichier) }}</span>
+          <span>{{ formatDate(doc.dateCreation) }}</span>
+        </div>
+      </div>
+
+      <!-- Actions (masquées à l'impression) -->
+      <div class="doc-card__actions">
+        <button class="doc-btn doc-btn--voir" (click)="ouvrirFichier(doc.cheminFichier)" title="Ouvrir dans un nouvel onglet">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path d="M10 3C5 3 1.73 7.11 1 10c.73 2.89 4 7 9 7s8.27-4.11 9-7c-.73-2.89-4-7-9-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+          Aperçu
+        </button>
+        <button class="doc-btn doc-btn--dl" (click)="telechargerFichier(doc.cheminFichier, doc.nomFichier)" title="Télécharger">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="15"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+          Télécharger
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ─── MODAL CHANGEMENT STATUT ─── -->
+<div class="modal-overlay" *ngIf="showModalStatut()" (click)="fermerModal()">
+  <div class="modal-boite" (click)="$event.stopPropagation()">
+    <div class="modal-header"
+         [class.modal-header--danger]="isDanger"
+         [class.modal-header--succes]="!isDanger">
+      <h3 class="modal-titre">
+        {{ isDanger ? '⚠' : '✓' }} {{ labelNouveauStatut }}
+      </h3>
+      <button class="modal-fermer" (click)="fermerModal()">✕</button>
+    </div>
+
+    <form [formGroup]="formStatut" (ngSubmit)="confirmerChangementStatut()">
+      <div class="modal-corps">
+
+        <!-- Choix du service de destination (TRANSFERE seulement) -->
+        <div class="form-groupe"
+             *ngIf="formStatut.value.nouveauStatutCode === 'TRANSFERE'">
+          <label class="form-label">
+            Service de destination <span style="color:#E74C3C">*</span>
+          </label>
+          <p style="font-size:0.82rem; color:#7F8C9A; margin:0 0 10px">
+            Dossier actuellement dans :
+            <strong>{{ dossier()?.serviceNom }}</strong>
+          </p>
+          <div class="services-transfert-grille">
+            <button
+              type="button"
+              *ngFor="let s of servicesDisponibles()"
+              class="service-transfert-btn"
+              [class.service-transfert-btn--actif]="serviceCible() === s.id"
+              [disabled]="s.nom === dossier()?.serviceNom"
+              (click)="serviceCible.set(s.id)">
+              {{ s.nom }}
+              <span *ngIf="serviceCible() === s.id"> ✓</span>
+              <span *ngIf="s.nom === dossier()?.serviceNom"
+                    style="font-size:0.7rem; color:#999"> (actuel)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-groupe">
+          <label class="form-label">
+            Commentaire
+            <span class="optionnel" *ngIf="isDanger"> — motif de rejet obligatoire</span>
+            <span class="optionnel" *ngIf="!isDanger"> (optionnel)</span>
+          </label>
+          <textarea
+            formControlName="commentaire"
+            rows="4"
+            class="form-textarea"
+            [class.textarea-danger]="isDanger"
+            [placeholder]="isDanger
+              ? 'Indiquez le motif du rejet…'
+              : formStatut.value.nouveauStatutCode === 'TRANSFERE'
+                ? 'Motif du transfert (optionnel)…'
+                : 'Ajouter un commentaire…'">
+          </textarea>
+        </div>
+
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-annuler" (click)="fermerModal()">Annuler</button>
+        <button type="submit"
+          class="btn-confirmer"
+          [class.btn-confirmer--danger]="isDanger"
+          [disabled]="enCours()
+            || (isDanger && !formStatut.value.commentaire?.trim())
+            || (formStatut.value.nouveauStatutCode === 'TRANSFERE' && !serviceCible())">
+          <span *ngIf="!enCours()">Confirmer</span>
+          <span *ngIf="enCours()">En cours…</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

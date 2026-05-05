@@ -1,0 +1,369 @@
+/* src/app/modules/archiviste/dossiers-a-archiver/dossiers-a-archiver.css */
+:host {
+  --violet: #6A1B9A;
+  --violet-light: #8E24AA;
+  --lavande: #CE93D8;
+  --lavande-pale: #F3E5F5;
+  --gris-ardoise: #78909C;
+  --gris-pale: #ECEFF1;
+  --beige: #F5F5DC;
+  --or: #B8860B;
+  --blanc: #ffffff;
+  --texte: #1A1A2E;
+  --texte-muted: #546E7A;
+  --ombre: 0 2px 16px rgba(106,27,154,0.08);
+  --radius: 10px;
+}
+
+/* ─── PAGE ─── */
+.page {
+  padding: 14px 12px;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* ─── HEADER ─── */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.page-title {
+  font-family: 'Georgia', serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--violet);
+  margin: 0 0 3px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  line-height: 1.3;
+}
+
+.page-subtitle {
+  font-size: 11px;
+  color: var(--texte-muted);
+  margin: 0;
+  font-style: italic;
+}
+
+.compteur-badge {
+  background: var(--lavande-pale);
+  border: 1px solid var(--lavande);
+  color: var(--violet);
+  padding: 5px 10px;
+  border-radius: 14px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* ─── TOAST ─── */
+.toast-success {
+  background: #E8F5E9;
+  border: 1px solid #A5D6A7;
+  color: #2E7D32;
+  padding: 9px 11px;
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+
+/* ─── FILTRES ─── */
+.filtres-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-direction: column;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--blanc);
+  border: 1px solid #E0D0EC;
+  border-radius: 7px;
+  padding: 7px 10px;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: var(--ombre);
+}
+
+.search-box svg { width: 14px; height: 14px; color: var(--texte-muted); flex-shrink: 0; }
+
+.search-input {
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: var(--texte);
+  width: 100%;
+  background: transparent;
+}
+
+.select-service {
+  background: var(--blanc);
+  border: 1px solid #E0D0EC;
+  border-radius: 7px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: var(--texte);
+  cursor: pointer;
+  box-shadow: var(--ombre);
+  width: 100%;
+}
+
+/* ─── TABLE ─── */
+.table-wrapper {
+  background: var(--blanc);
+  border-radius: var(--radius);
+  box-shadow: var(--ombre);
+  overflow: hidden;
+  border: 1px solid #F0E6F8;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table-archiviste {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+  min-width: 420px;
+}
+
+.table-archiviste thead tr {
+  background: var(--beige);
+  border-bottom: 2px solid var(--lavande);
+}
+
+.table-archiviste th {
+  padding: 7px 8px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--violet);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.table-row { border-bottom: 1px solid #F5F0FA; }
+.table-row:hover { background: var(--lavande-pale); }
+
+.table-archiviste td {
+  padding: 8px 8px;
+  color: var(--texte);
+  vertical-align: middle;
+}
+
+.badge-numero {
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+  background: var(--lavande-pale);
+  color: var(--violet);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--lavande);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.titre-cell {
+  max-width: 100px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.citoyen-info { display: flex; flex-direction: column; gap: 1px; }
+.citoyen-nom { font-weight: 500; font-size: 11px; }
+.citoyen-email { font-size: 9px; color: var(--texte-muted); }
+
+.date-cell { color: var(--texte-muted); font-size: 10px; white-space: nowrap; }
+
+.badge-service {
+  font-size: 9px;
+  background: var(--beige);
+  color: var(--gris-ardoise);
+  padding: 2px 5px;
+  border-radius: 3px;
+  border: 1px solid #DDD;
+  white-space: nowrap;
+  display: inline-block;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.docs-cell { text-align: center; }
+.docs-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px; height: 22px;
+  background: var(--gris-pale);
+  color: var(--gris-ardoise);
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.btn-archiver {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--violet);
+  color: var(--blanc);
+  border: none;
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.btn-archiver svg { width: 12px; height: 12px; }
+.btn-archiver:hover { background: var(--violet-light); }
+
+/* ─── VIDE ─── */
+.vide-etat {
+  background: var(--blanc);
+  border-radius: var(--radius);
+  padding: 30px 14px;
+  text-align: center;
+  color: var(--texte-muted);
+  font-size: 13px;
+  box-shadow: var(--ombre);
+}
+.vide-etat span { font-size: 32px; display: block; margin-bottom: 10px; }
+
+/* ─── PAGINATION ─── */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+.btn-page {
+  background: var(--violet);
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.btn-page:disabled { background: var(--gris-ardoise); cursor: not-allowed; }
+.page-info { font-size: 11px; color: var(--texte-muted); }
+
+/* ─── MODALE (bottom sheet) ─── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26,0,51,0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 500;
+  padding: 0;
+}
+
+.modal-box {
+  background: var(--blanc);
+  border-radius: 14px 14px 0 0;
+  padding: 18px 14px 24px;
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+  border-top: 3px solid var(--violet);
+}
+
+.modal-icon { font-size: 32px; margin-bottom: 8px; }
+
+.modal-titre {
+  font-family: 'Georgia', serif;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--violet);
+  margin: 0 0 8px 0;
+}
+
+.modal-texte { font-size: 12px; color: var(--texte-muted); margin: 0 0 8px 0; line-height: 1.6; }
+
+.modal-alerte {
+  font-size: 11px;
+  color: #B8540B;
+  background: #FFF3E0;
+  border: 1px solid #FFCC80;
+  border-radius: 6px;
+  padding: 7px 9px;
+  margin: 0 0 14px 0;
+}
+
+.modal-actions { display: flex; gap: 8px; flex-direction: column; }
+
+.btn-annuler {
+  padding: 10px;
+  border: 1px solid #DDD;
+  background: var(--blanc);
+  color: var(--texte-muted);
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  width: 100%;
+}
+
+.btn-confirmer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  background: var(--violet);
+  color: var(--blanc);
+  border: none;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  width: 100%;
+}
+.btn-confirmer:hover:not(:disabled) { background: var(--violet-light); }
+.btn-confirmer:disabled, .btn-annuler:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.spinner {
+  width: 12px; height: 12px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── ≥ 540px ─── */
+@media (min-width: 540px) {
+  .page { padding: 18px 16px; }
+  .filtres-bar { flex-direction: row; }
+  .select-service { width: auto; min-width: 160px; }
+  .modal-overlay { align-items: center; padding: 1rem; }
+  .modal-box { border-radius: 12px; }
+  .modal-actions { flex-direction: row; }
+  .btn-annuler, .btn-confirmer { width: auto; flex: 1; }
+}
+
+@media (min-width: 900px) {
+  .page { padding: 24px 28px; }
+  .table-archiviste { font-size: 13px; }
+  .table-archiviste th { font-size: 11px; padding: 10px 12px; }
+  .table-archiviste td { padding: 11px 12px; }
+}

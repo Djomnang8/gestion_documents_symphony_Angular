@@ -1,0 +1,127 @@
+<!-- src/app/modules/archiviste/archiviste-layout/archiviste-layout.html -->
+<!-- CORRECTION : <app-language-switcher> RETIRÉ du sidebar.
+     La langue choisie sur la page Login est automatiquement
+     propagée ici via TranslationService singleton + localStorage. -->
+<div class="layout-wrapper" [class.sidebar-collapsed]="sidebarCollapsed">
+
+  <!-- overlay mobile uniquement -->
+  <div class="sidebar-overlay" (click)="fermerSidebar()"></div>
+
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <button class="toggle-btn" (click)="toggleSidebar()" title="Réduire / Étendre">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="3" y1="6"  x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/>
+          <line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+      <div class="logo-zone">
+        <span class="logo-icon">🗄</span>
+        <div class="logo-text">
+          <span class="logo-title">Espace Archiviste</span>
+          <span class="logo-subtitle">GestDocs</span>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+
+      <a routerLink="/archiviste/dashboard" routerLinkActive="nav-actif" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </span>
+        <span class="nav-label">Tableau de bord</span>
+      </a>
+
+      <a routerLink="/archiviste/dossiers" routerLinkActive="nav-actif" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          </svg>
+        </span>
+        <span class="nav-label">Dossiers à archiver</span>
+      </a>
+
+      <a routerLink="/archiviste/archives" routerLinkActive="nav-actif" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="21 8 21 21 3 21 3 8"/>
+            <rect x="1" y="3" width="22" height="5"/>
+            <line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+        </span>
+        <span class="nav-label">Archives consultables</span>
+      </a>
+
+      <a routerLink="/archiviste/historique/:dossierId"
+         routerLinkActive="nav-actif-versions"
+         [routerLinkActiveOptions]="{exact:false}"
+         class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </span>
+        <span class="nav-label">Historique des versions</span>
+      </a>
+
+      <a routerLink="/archiviste/statistiques" routerLinkActive="nav-actif" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
+          </svg>
+        </span>
+        <span class="nav-label">Statistiques</span>
+      </a>
+
+      <a routerLink="/archiviste/notifications" routerLinkActive="nav-actif" class="nav-item">
+        <span class="nav-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+        </span>
+        <span class="nav-label">Notifications</span>
+      </a>
+
+    </nav>
+
+    <!-- USER BLOC cliquable → Profil -->
+    <div class="user-bloc user-bloc--cliquable" (click)="voirProfil()" title="Voir mon profil">
+      <div class="user-avatar">{{ initiales }}</div>
+      <div class="user-info">
+        <span class="user-nom">{{ user?.prenom }} {{ user?.nom }}</span>
+        <span class="user-role">Archiviste</span>
+        <span class="user-profil-hint">Voir le profil →</span>
+      </div>
+    </div>
+
+    <!-- Footer sidebar — PAS de sélecteur de langue ici -->
+    <div class="sidebar-footer">
+      <button class="deconnexion-btn" (click)="deconnecter()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        <span>Se déconnecter</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <div class="content-area">
+      <router-outlet />
+    </div>
+  </main>
+
+</div>

@@ -1,0 +1,161 @@
+<!-- src/app/modules/archiviste/archives-consultables/archives-consultables.html -->
+<!-- Classement : Archive_Service_X → Citoyen → Dossiers -->
+<div class="page">
+
+  <header class="page-header">
+    <div>
+      <h1 class="page-title"><span>🗄️</span> Archives Consultables</h1>
+      <p class="page-subtitle">Classées par service puis par citoyen — lecture seule</p>
+    </div>
+    <div class="compteur-badge">{{ totalFiltrees() }} archive(s)</div>
+  </header>
+
+  <!-- FILTRES -->
+  <div class="filtres-zone">
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+      </svg>
+      <input type="text" placeholder="Rechercher (numéro, citoyen, titre)…"
+        [value]="recherche()"
+        (input)="setRecherche($any($event.target).value)"
+        class="search-input" />
+    </div>
+    <div class="filtres-group">
+      <select [value]="filtreAnnee()" (change)="setFiltreAnnee($any($event.target).value)" class="select-filtre">
+        <option value="">Toutes les années</option>
+        @for (a of annees; track a) { <option [value]="a">{{ a }}</option> }
+      </select>
+      <select [value]="filtreService()" (change)="setFiltreService($any($event.target).value)" class="select-filtre">
+        <option value="">Tous les services</option>
+        <option value="Droit des Affaires">Droit des Affaires</option>
+        <option value="Droit de la Famille">Droit de la Famille</option>
+        <option value="Droit Pénal">Droit Pénal</option>
+        <option value="Droit Immobilier">Droit Immobilier</option>
+        <option value="Direction Centrale">Direction Centrale</option>
+        <option value="Archives Centrales">Archives Centrales</option>
+      </select>
+    </div>
+  </div>
+
+  @if (chargement()) {
+    <div class="vide-etat"><span>⏳</span><p>Chargement des archives…</p></div>
+  } @else if (erreur()) {
+    <div class="vide-etat erreur"><span>⚠️</span><p>{{ erreur() }}</p></div>
+  } @else if (groupesServices().length === 0) {
+    <div class="vide-etat"><span>🔍</span><p>Aucune archive ne correspond à votre recherche.</p></div>
+  } @else {
+
+    <!-- ARBORESCENCE : Service → Citoyen → Archives -->
+    <div class="arbre">
+
+      @for (groupe of groupesServices(); track groupe.nomService) {
+        <!-- NIVEAU 1 : Dossier Service -->
+        <div class="noeud-service">
+          <div class="noeud-service-header" (click)="toggleService(groupe)" role="button">
+            <span class="noeud-toggle">{{ groupe.expanded ? '▼' : '▶' }}</span>
+            <span class="noeud-icone">📁</span>
+            <span class="noeud-service-nom">{{ nomDossierService(groupe.nomService) }}</span>
+            <span class="noeud-badge">{{ groupe.citoyens.length }} citoyen(s)</span>
+          </div>
+
+          @if (groupe.expanded) {
+            <div class="noeud-service-body">
+
+              @for (citoyen of groupe.citoyens; track citoyen.emailCitoyen) {
+                <!-- NIVEAU 2 : Dossier Citoyen -->
+                <div class="noeud-citoyen">
+                  <div class="noeud-citoyen-header" (click)="toggleCitoyen(citoyen)" role="button">
+                    <span class="noeud-toggle">{{ citoyen.expanded ? '▼' : '▶' }}</span>
+                    <span class="noeud-icone">👤</span>
+                    <span class="noeud-citoyen-nom">{{ citoyen.nomCitoyen }}</span>
+                    <span class="noeud-email">{{ citoyen.emailCitoyen }}</span>
+                    <span class="noeud-badge">{{ citoyen.archives.length }} dossier(s)</span>
+                  </div>
+
+                  @if (citoyen.expanded) {
+                    <div class="noeud-citoyen-body">
+
+                      <!-- NIVEAU 3 : Cartes archives -->
+                      <div class="archives-grid-mini">
+                        @for (arc of citoyen.archives; track arc.id) {
+                          <div class="archive-card-mini">
+                            <div class="card-miniature">{{ arc.miniature }}</div>
+                            <div class="card-body">
+                              <span class="card-numero">{{ arc.numero }}</span>
+                              <h3 class="card-titre">{{ arc.titre }}</h3>
+                              <div class="card-meta">
+                                <span class="meta-item">
+                                  📅 {{ arc.dateArchivage | date: 'dd/MM/yyyy' }}
+                                </span>
+                                <span class="meta-item">
+                                  📎 {{ arc.nbDocuments }} doc(s)
+                                </span>
+                              </div>
+                            </div>
+                            <button class="btn-consulter" (click)="consulterArchive(arc)">
+                              👁 Consulter
+                            </button>
+                          </div>
+                        }
+                      </div>
+
+                    </div>
+                  }
+                </div>
+              }
+
+            </div>
+          }
+        </div>
+      }
+
+    </div>
+  }
+
+</div>
+
+<!-- PANNEAU DÉTAIL ARCHIVE -->
+@if (vueDetail()) {
+  <div class="detail-overlay" (click)="fermerDetail()">
+    <div class="detail-panel" (click)="$event.stopPropagation()">
+      <div class="detail-header">
+        <div class="detail-miniature">{{ vueDetail()!.miniature }}</div>
+        <div>
+          <span class="detail-numero">{{ vueDetail()!.numero }}</span>
+          <h2 class="detail-titre">{{ vueDetail()!.titre }}</h2>
+        </div>
+        <button class="btn-fermer-detail" (click)="fermerDetail()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div class="detail-body">
+        <div class="info-grid">
+          <div class="info-item"><label>Citoyen</label><span>{{ vueDetail()!.citoyen }}</span></div>
+          <div class="info-item"><label>Email</label><span>{{ vueDetail()!.emailCitoyen }}</span></div>
+          <div class="info-item"><label>Date d'archivage</label><span>{{ vueDetail()!.dateArchivage | date: 'dd MMMM yyyy' : '' : 'fr' }}</span></div>
+          <div class="info-item"><label>Service</label><span>{{ vueDetail()!.service }}</span></div>
+          <div class="info-item"><label>Chemin d'archivage</label>
+            <span class="chemin-archivage">
+              {{ nomDossierService(vueDetail()!.service) }} / {{ vueDetail()!.citoyen }}
+            </span>
+          </div>
+          <div class="info-item"><label>Nombre de documents</label><span>{{ vueDetail()!.nbDocuments }} fichier(s)</span></div>
+        </div>
+        <div class="docs-placeholder">
+          <p class="docs-label">📎 Documents joints (lecture seule)</p>
+          @for (i of [].constructor(vueDetail()!.nbDocuments); track $index) {
+            <div class="doc-item">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+              </svg>
+              Document_{{ $index + 1 }}_{{ vueDetail()!.numero }}.pdf
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+}

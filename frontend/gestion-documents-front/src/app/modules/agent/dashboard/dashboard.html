@@ -1,0 +1,165 @@
+<!-- src/app/modules/agent/dashboard/dashboard.html -->
+<div class="dashboard-wrapper">
+
+  <!-- EN-TÊTE -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 class="page-title">
+        Bonjour, <strong>{{ prenomAgent }}</strong>
+      </h1>
+      <p class="page-subtitle">{{ today }}</p>
+    </div>
+    <div class="page-header-right">
+      <span class="heure">{{ heure }}</span>
+      <a routerLink="/agent/dossiers/nouveau" class="btn-nouveau">+ Nouveau dossier</a>
+    </div>
+  </div>
+
+  <!-- KPI CARDS — sans ARCHIVE -->
+  <div class="kpi-grille" *ngIf="stats() as s">
+    <div class="kpi-card kpi-bleu">
+      <div class="kpi-icone">📁</div>
+      <div class="kpi-corps">
+        <div class="kpi-valeur">{{ s.recusAujourdhui }}</div>
+        <div class="kpi-label">Reçus aujourd'hui</div>
+        <div class="kpi-badge">aujourd'hui</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-icone">⚙️</div>
+      <div class="kpi-corps">
+        <div class="kpi-valeur">{{ s.enCours }}</div>
+        <div class="kpi-label">En cours de traitement</div>
+        <div class="kpi-badge">actifs</div>
+      </div>
+    </div>
+    <div class="kpi-card kpi-vert">
+      <div class="kpi-icone">✅</div>
+      <div class="kpi-corps">
+        <div class="kpi-valeur">{{ s.traitesSemine }}</div>
+        <div class="kpi-label">Traités cette semaine</div>
+        <div class="kpi-badge">↑ cette semaine</div>
+      </div>
+    </div>
+    <!-- KPI En retard — cliquable → affiche tableau Numéro/Statut/Jours -->
+    <div class="kpi-card kpi-rouge kpi-cliquable" (click)="ouvrirEnRetard()">
+      <div class="kpi-icone">⏰</div>
+      <div class="kpi-corps">
+        <div class="kpi-valeur">{{ s.enRetard }}</div>
+        <div class="kpi-label">En retard (&gt;7 jours)</div>
+        <div class="kpi-badge kpi-badge--alerte">⚠ attention requise</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHARGEMENT -->
+  <div class="chargement-zone" *ngIf="chargement()">
+    <div class="spinner"></div>
+    <span>Chargement…</span>
+  </div>
+
+  <!-- DOSSIERS RÉCENTS — statuts ARCHIVE exclus -->
+  <div class="section-recents">
+    <div class="section-entete">
+      <h2>Dossiers récents</h2>
+      <a routerLink="/agent/dossiers" class="lien-voir-tout">Voir tout →</a>
+    </div>
+    <div class="tableau-wrapper">
+      <table class="tableau-recents">
+        <thead>
+          <tr>
+            <th>NUMÉRO</th>
+            <th>CLIENT</th>
+            <th>STATUT</th>
+            <th>DÉPÔT</th>
+            <th>JOURS</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let d of dossiersRecents()">
+            <td class="col-numero">{{ d.numero }}</td>
+            <td class="col-citoyen">{{ d.nomCitoyen }}</td>
+            <td>
+              <span class="badge-statut" [ngClass]="getClassStatut(d.statutCode)">
+                {{ d.statutLibelle }}
+              </span>
+            </td>
+            <td class="col-date">{{ formatDate(d.dateDepot) }}</td>
+            <td class="col-jours" [class.retard]="joursDepuis(d.dateDepot) > 7">
+              {{ joursDepuis(d.dateDepot) }}j
+            </td>
+            <td>
+              <button class="btn-voir" (click)="voirDossier(d.id)">Voir</button>
+            </td>
+          </tr>
+          <tr *ngIf="dossiersRecents().length === 0">
+            <td colspan="6" class="vide-msg">Aucun dossier récent.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ MODAL DOSSIERS EN RETARD ══════════════════════════════
+     Tableau : Numéro | Statut | Jours
+     Critère : statut RECU ou EN_COURS ET jours > 7
+     ═══════════════════════════════════════════════════════ -->
+<div class="modal-overlay" *ngIf="showRetard()" (click)="fermerRetard()">
+  <div class="modal-panneau" (click)="$event.stopPropagation()">
+
+    <div class="modal-header modal-header--danger">
+      <h3 class="modal-titre">⏰ Dossiers en retard (&gt;7 jours)</h3>
+      <button class="modal-fermer" (click)="fermerRetard()">✕</button>
+    </div>
+
+    <div class="chargement-zone" *ngIf="chargementRetard()">
+      <div class="spinner"></div><span>Chargement…</span>
+    </div>
+
+    <div class="modal-corps" *ngIf="!chargementRetard()">
+
+      <div class="vide-section" *ngIf="dossiersEnRetard().length === 0">
+        <p>✅ Aucun dossier en retard pour le moment.</p>
+      </div>
+
+      <div class="retard-tableau-wrapper" *ngIf="dossiersEnRetard().length > 0">
+        <table class="tableau-retard">
+          <thead>
+            <tr>
+              <th>NUMÉRO</th>
+              <th>STATUT</th>
+              <th>JOURS</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let d of dossiersEnRetard()">
+              <td class="col-numero">{{ d.numero }}</td>
+              <td>
+                <span class="badge-statut"
+                      [ngClass]="d.statutCode === 'RECU' ? 'badge-recu' : 'badge-encours'">
+                  {{ d.statutLibelle }}
+                </span>
+              </td>
+              <td class="col-jours retard">{{ d.joursEnRetard }}j</td>
+              <td>
+                <button class="btn-voir"
+                        (click)="voirDossier(d.id); fermerRetard()">
+                  Voir
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="retard-info" *ngIf="dossiersEnRetard().length > 0">
+        {{ dossiersEnRetard().length }} dossier(s) nécessitent une attention immédiate.
+      </p>
+
+    </div>
+  </div>
+</div>

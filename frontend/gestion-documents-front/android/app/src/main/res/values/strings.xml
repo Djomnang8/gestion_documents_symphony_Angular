@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Gestion Documents</string>
+    <string name="title_activity_main">Gestion Documents</string>
+    <string name="package_name">com.gestion.documents</string>
+    <string name="custom_url_scheme">com.gestion.documents</string>
+</resources>

@@ -1,0 +1,109 @@
+<!-- src/app/modules/archiviste/statistiques-archiviste/statistiques-archiviste.html -->
+<div class="stats-arch-wrapper">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <div class="page-header-left">
+      <h1 class="page-title">
+        <span class="title-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="21 8 21 21 3 21 3 8"/>
+            <rect x="1" y="3" width="22" height="5"/>
+            <line x1="10" y1="12" x2="14" y2="12"/>
+          </svg>
+        </span>
+        Statistiques d'archivage
+      </h1>
+      <p class="page-subtitle">Évolution des archives · {{ labelPeriode() }}</p>
+    </div>
+  </div>
+
+  <!-- FILTRES PÉRIODE -->
+  <div class="filtres-barre">
+    <div class="periode-tabs">
+      @for (p of periodes; track p.value) {
+        <button class="periode-btn" [class.actif]="periode === p.value"
+                (click)="periode = p.value; charger()">{{ p.label }}</button>
+      }
+    </div>
+    @if (periode === 'custom') {
+      <div class="date-groupe">
+        <label class="date-lbl">Du</label>
+        <input type="date" class="input-date" [(ngModel)]="dateDebut" />
+        <label class="date-lbl">Au</label>
+        <input type="date" class="input-date" [(ngModel)]="dateFin" />
+        <button class="btn-appliquer" (click)="appliquer()">Appliquer</button>
+      </div>
+    }
+  </div>
+
+  <!-- CHARGEMENT -->
+  @if (chargement()) {
+    <div class="loading-zone">
+      <div class="spinner"></div><span>Calcul…</span>
+    </div>
+  }
+
+@if (!chargement() && stats(); as s) {
+
+    <!-- KPI CARDS -->
+    <div class="kpi-grille">
+      <div class="kpi-card kpi-vert">
+        <div class="kpi-icone">🗄</div>
+        <div class="kpi-corps">
+          <div class="kpi-valeur">{{ s.totalArchivesPeriode }}</div>
+          <div class="kpi-label">Archivés sur la période</div>
+        </div>
+      </div>
+      <div class="kpi-card kpi-bleu">
+        <div class="kpi-icone">📚</div>
+        <div class="kpi-corps">
+          <div class="kpi-valeur">{{ s.totalArchivesGlobal }}</div>
+          <div class="kpi-label">Total archives</div>
+        </div>
+      </div>
+      <div class="kpi-card kpi-ambre">
+        <div class="kpi-icone">↩</div>
+        <div class="kpi-corps">
+          <div class="kpi-valeur">{{ s.restaurationsPeriode }}</div>
+          <div class="kpi-label">Versions restaurées</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GRAPHIQUE 1 : Évolution mensuelle des archivages -->
+    <div class="graph-card">
+      <div class="graph-header">
+        <span class="graph-titre">Évolution mensuelle des archivages (12 mois)</span>
+        <span class="graph-badge" style="background:#E0F2F1;color:#00897B">Aire · Menthe</span>
+      </div>
+      <div class="graph-body">
+        <canvas #canvasEvol></canvas>
+      </div>
+    </div>
+
+    <!-- GRAPHIQUE 2 : Répartition par service -->
+    <div class="graph-card">
+      <div class="graph-header">
+        <span class="graph-titre">Dossiers archivés par service</span>
+        <span class="graph-badge" style="background:#E8EAF6;color:#3949AB">Barres</span>
+      </div>
+      <div class="graph-body">
+        <canvas #canvasServices></canvas>
+      </div>
+    </div>
+
+    <!-- INFO RESTAURATION -->
+    @if (s.restaurationsPeriode > 0) {
+      <div class="info-restauration">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ s.restaurationsPeriode }} version(s) ont été restaurées sur cette période.
+        Pour voir le détail, consultez la page <strong>Historique des versions</strong>.
+      </div>
+    }
+  }
+
+</div>

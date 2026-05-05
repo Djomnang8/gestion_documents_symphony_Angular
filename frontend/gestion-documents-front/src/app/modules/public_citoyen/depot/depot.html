@@ -1,0 +1,194 @@
+<div class="page-depot">
+  <app-navbar-public></app-navbar-public>
+
+  <div class="depot-container">
+
+    <!-- CONFIRMATION -->
+    <div class="confirmation-carte" *ngIf="succes">
+      <div class="confirmation-icone">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" width="40">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      </div>
+      <h2>{{ 'depot.succes_titre' | translate }}</h2>
+      <p>{{ 'depot.succes_texte' | translate }}</p>
+
+      <div class="numero-suivi-box">
+        <span class="numero-label">{{ 'depot.numero_suivi' | translate }}</span>
+        <span class="numero-valeur">{{ numeroDossier }}</span>
+        <button class="btn-copier" (click)="copierNumero()" title="Copier">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="16">
+            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+          </svg>
+          {{ 'depot.copier' | translate }}
+        </button>
+      </div>
+
+      <div class="confirmation-infos">
+        <div class="info-item">
+          <svg viewBox="0 0 20 20" fill="#2ECC71" width="18">
+            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+          </svg>
+          <span>{{ 'depot.email_confirmation' | translate }}</span>
+        </div>
+        <div class="info-item">
+          <svg viewBox="0 0 20 20" fill="#3498DB" width="18">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415 L11 9.586V6z" clip-rule="evenodd"/>
+          </svg>
+          <span>{{ 'depot.delai_traitement' | translate }}</span>
+        </div>
+      </div>
+
+      <div class="confirmation-actions">
+        <button class="btn-suivi" routerLink="/public/suivi">{{ 'depot.suivre_dossier_btn' | translate }}</button>
+        <button class="btn-nouveau" (click)="nouveauDepot()">{{ 'depot.autre_dossier_btn' | translate }}</button>
+      </div>
+    </div>
+
+    <!-- FORMULAIRE -->
+    <div class="formulaire-wrapper" *ngIf="!succes">
+      <div class="formulaire-entete">
+        <div class="entete-icone">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" width="28">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <div>
+          <h1>{{ 'depot.page_titre' | translate }}</h1>
+          <p>{{ 'depot.page_desc' | translate }}</p>
+        </div>
+      </div>
+
+      <div class="alerte-erreur" *ngIf="erreurMessage">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="18">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        {{ erreurMessage }}
+      </div>
+
+      <form [formGroup]="formulaire" (ngSubmit)="soumettre()">
+
+        <!-- SECTION 1 : VOS INFORMATIONS -->
+        <div class="section-formulaire">
+          <h2 class="section-label">
+            <span class="label-numero">1</span> {{ 'depot.section1' | translate }}
+          </h2>
+
+          <div class="champs-grille">
+            <div class="groupe-champ">
+              <label for="nomCitoyen">{{ 'depot.nom' | translate }} <span class="requis">*</span></label>
+              <input id="nomCitoyen" type="text" formControlName="nomCitoyen" placeholder="Ex : Jean DUPONT" [class.invalide]="estChampInvalide('nomCitoyen')">
+              <span class="erreur-champ" *ngIf="estChampInvalide('nomCitoyen')">{{ 'depot.erreur_required_nom' | translate }}</span>
+            </div>
+
+            <div class="groupe-champ">
+              <label for="emailCitoyen">{{ 'depot.email' | translate }} <span class="requis">*</span></label>
+              <input id="emailCitoyen" type="email" formControlName="emailCitoyen" placeholder="votre@email.com" [class.invalide]="estChampInvalide('emailCitoyen')">
+              <span class="erreur-champ" *ngIf="estChampInvalide('emailCitoyen')">{{ 'depot.erreur_required_email' | translate }}</span>
+            </div>
+
+            <div class="groupe-champ">
+              <label for="telephoneCitoyen">{{ 'depot.telephone' | translate }}</label>
+              <input id="telephoneCitoyen" type="tel" formControlName="telephoneCitoyen" placeholder="+237 6XX XXX XXX" [class.invalide]="estChampInvalide('telephoneCitoyen')">
+              <span class="erreur-champ" *ngIf="estChampInvalide('telephoneCitoyen')">Numéro de téléphone invalide.</span> <!-- message non traduit pour l'instant, peut être ajouté -->
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 2 : DÉTAILS DU DOSSIER -->
+        <div class="section-formulaire">
+          <h2 class="section-label">
+            <span class="label-numero">2</span> {{ 'depot.section2' | translate }}
+          </h2>
+
+          <div class="groupe-champ">
+            <label for="titre">{{ 'depot.titre' | translate }} <span class="requis">*</span></label>
+            <input id="titre" type="text" formControlName="titre" placeholder="Ex : Demande de certificat de résidence" [class.invalide]="estChampInvalide('titre')">
+            <span class="erreur-champ" *ngIf="estChampInvalide('titre')">{{ 'depot.erreur_required_titre' | translate }}</span>
+          </div>
+
+          <div class="groupe-champ">
+            <label for="description">{{ 'depot.description' | translate }} <span class="requis">*</span></label>
+            <textarea id="description" rows="4" formControlName="description" placeholder="Décrivez l'objet de votre dossier..." [class.invalide]="estChampInvalide('description')"></textarea>
+            <span class="erreur-champ" *ngIf="estChampInvalide('description')">{{ 'depot.erreur_required_description' | translate }}</span>
+          </div>
+
+          <div class="groupe-champ">
+            <label for="serviceId">{{ 'depot.service' | translate }} <span class="requis">*</span></label>
+            <select id="serviceId" formControlName="serviceId" class="select-service"
+                    [class.invalide]="estChampInvalide('serviceId')">
+              <option [value]="null">{{ 'depot.choisir_service' | translate }}</option>
+              <option *ngFor="let s of services" [value]="s.id">{{ s.nom }}</option>
+            </select>
+            <span class="erreur-champ" *ngIf="estChampInvalide('serviceId')">{{ 'depot.erreur_required_service' | translate }}</span>
+          </div>
+        </div>
+
+        <!-- SECTION 3 : DOCUMENTS -->
+        <div class="section-formulaire">
+          <h2 class="section-label">
+            <span class="label-numero">3</span> {{ 'depot.section3' | translate }}
+          </h2>
+
+          <div class="zone-depot"
+               [class.actif]="dragActif"
+               (dragover)="onDragOver($event)"
+               (dragleave)="onDragLeave()"
+               (drop)="onDrop($event)"
+               *ngIf="fichiersSelectionnes.length < 10">
+            <input type="file" id="fichier-input" hidden multiple
+                   accept=".pdf,.jpg,.jpeg,.png"
+                   (change)="onFichierChoisi($event)">
+            <div class="zone-depot-contenu">
+              <div class="zone-icone">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="48">
+                  <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+              </div>
+              <p class="zone-texte-principal">{{ 'depot.glisser_deposer' | translate }}</p>
+              <p class="zone-texte-secondaire">{{ 'depot.ou' | translate }}</p>
+              <label for="fichier-input" class="btn-parcourir">{{ 'depot.parcourir' | translate }}</label>
+              <p class="zone-formats">{{ 'depot.formats_acceptes' | translate }}</p>
+            </div>
+          </div>
+
+          <div class="fichiers-liste" *ngIf="fichiersSelectionnes.length">
+            <div class="fichier-item" *ngFor="let f of fichiersSelectionnes; let i = index">
+              <div class="fichier-info-bloc">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#2ECC71" stroke-width="2" width="20">
+                  <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                </svg>
+                <span class="fichier-nom">{{ f.name }}</span>
+                <span class="fichier-taille">({{ formaterTaille(f.size) }})</span>
+              </div>
+              <button type="button" class="btn-supprimer-petit" (click)="supprimerFichier(i)">
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="formulaire-actions">
+          <button type="submit" class="btn-soumettre" [disabled]="enCours">
+            <span *ngIf="!enCours">
+              <svg viewBox="0 0 20 20" fill="currentColor" width="18">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+              </svg>
+              {{ 'depot.soumettre' | translate }}
+            </span>
+            <span class="chargement" *ngIf="enCours">
+              <span class="spinner"></span> {{ 'depot.envoi_en_cours' | translate }}
+            </span>
+          </button>
+          <p class="note-confidentialite">
+            {{ 'depot.confidentialite' | translate }}
+          </p>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,55 @@
+/* src/app/modules/administration/admin-layout/admin-layout.css
+   Palette Admin : #2C3E50 sidebar · #1ABC9C actif · #ECF0F1 texte
+   ---------------------------------------------------------------- */
+
+/* ─── Couleurs de la sidebar Admin ──────────────────────────── */
+.sidebar {
+  background: #2C3E50;
+  box-shadow: var(--shadow-sidebar);
+}
+
+.sidebar-header { border-bottom: 1px solid rgba(255,255,255,0.10); }
+
+.logo-title    { color: #ECF0F1; }
+.logo-subtitle { color: rgba(255,255,255,0.45); }
+.toggle-btn svg { stroke: rgba(255,255,255,0.75); }
+
+/* ─── Items nav ─────────────────────────────────────────────── */
+.nav-item {
+  color: rgba(255,255,255,0.65);
+  border-left-color: transparent;
+}
+.nav-item:hover {
+  background: rgba(255,255,255,0.07);
+  color: #ECF0F1;
+  border-left-color: rgba(255,255,255,0.3);
+}
+.nav-item.nav-actif {
+  background: rgba(26,188,156,0.18);
+  color: #1ABC9C;
+  border-left-color: #1ABC9C;
+  font-weight: 600;
+}
+
+/* ─── User bloc ─────────────────────────────────────────────── */
+.user-avatar {
+  background: #1ABC9C;
+  color: #fff;
+  border-radius: 50%;
+}
+.user-nom  { color: #ECF0F1; }
+.user-role { color: rgba(255,255,255,0.45); }
+
+/* ─── Déconnexion ───────────────────────────────────────────── */
+.deconnexion-btn {
+  color: rgba(255,255,255,0.65);
+}
+.deconnexion-btn:hover {
+  background: rgba(231,76,60,0.18);
+  color: #E74C3C;
+  border-color: rgba(231,76,60,0.35);
+}
+.deconnexion-btn svg { stroke: currentColor; }
+
+/* ─── Fond du contenu ───────────────────────────────────────── */
+.main-content { background: #F5F7FA; }

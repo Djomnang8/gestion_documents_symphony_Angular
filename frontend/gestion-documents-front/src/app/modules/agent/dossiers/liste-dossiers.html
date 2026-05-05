@@ -1,0 +1,126 @@
+<!-- src/app/modules/agent/dossiers/liste-dossiers.html -->
+<div class="liste-wrapper">
+
+  <!-- EN-TÊTE -->
+  <div class="liste-entete">
+    <h1 class="liste-titre">📁 Mes dossiers</h1>
+    <div class="entete-actions">
+      <button class="btn-export" (click)="exporterCsv()" title="Exporter en CSV">
+        ↓ Exporter CSV
+      </button>
+      <a routerLink="/agent/dossiers/nouveau" class="btn-nouveau">
+        + Nouveau dossier
+      </a>
+    </div>
+  </div>
+
+  <!-- BARRE DE FILTRES -->
+  <!--
+    CORRECTIF : la barre de recherche est réduite pour laisser visible
+    la liste déroulante de statut à côté.
+  -->
+  <div class="filtres-barre">
+
+    <!-- Recherche — taille réduite -->
+    <div class="filtre-recherche">
+      <svg viewBox="0 0 20 20" fill="currentColor" width="14" class="recherche-icone">
+        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+      </svg>
+      <input
+        type="text"
+        [(ngModel)]="filtreRecherche"
+        (keyup.enter)="rechercher()"
+        placeholder="Rechercher…"
+        class="input-recherche"
+      />
+    </div>
+
+    <!-- Liste déroulante statut — toujours visible -->
+    <select [(ngModel)]="filtreStatut" (change)="rechercher()" class="select-statut">
+      <option *ngFor="let s of statuts" [value]="s.code">{{ s.label }}</option>
+    </select>
+
+    <!-- Dates -->
+    <input type="date" [(ngModel)]="filtreDateDebut" (change)="rechercher()" class="input-date" title="Date de début">
+    <input type="date" [(ngModel)]="filtreDateFin" (change)="rechercher()" class="input-date" title="Date de fin">
+
+    <!-- Actions filtres -->
+    <button class="btn-filtrer" (click)="rechercher()">Filtrer</button>
+    <button class="btn-reinit" (click)="reinitialiser()" title="Réinitialiser">✕</button>
+  </div>
+
+  <!-- ERREUR -->
+  <div class="alerte-erreur" *ngIf="erreur()">⚠ {{ erreur() }}</div>
+
+  <!-- CHARGEMENT -->
+  <div class="chargement-zone" *ngIf="chargement()">
+    <div class="spinner"></div>
+    <span>Chargement…</span>
+  </div>
+
+  <!-- TABLEAU AVEC DÉFILEMENT INTERNE -->
+  <!--
+    CORRECTIF : le tableau est dans un conteneur à hauteur fixe avec overflow-y:auto.
+    La pagination est en dehors du tableau, donc toute la page ne défile pas.
+    La colonne "Service" est supprimée (toujours vide).
+  -->
+  <div class="tableau-conteneur" *ngIf="!chargement()">
+    <table class="tableau-dossiers">
+      <thead>
+        <tr>
+          <th>NUMÉRO</th>
+          <th>CITOYEN</th>
+          <th>STATUT</th>
+          <th>DÉPÔT</th>
+          <th>JOURS</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let d of dossiers()" class="ligne-dossier" (click)="voirDossier(d.id)">
+          <td class="col-numero">{{ d.numero }}</td>
+          <td class="col-citoyen">{{ d.nomCitoyen }}</td>
+          <td>
+            <span class="badge-statut" [ngClass]="getClassStatut(d.statutCode)">
+              {{ d.statutLibelle }}
+            </span>
+          </td>
+          <td class="col-date">{{ formatDate(d.dateDepot) }}</td>
+          <td class="col-jours" [class.retard]="joursDepuis(d.dateDepot) > 7">
+            {{ joursDepuis(d.dateDepot) }}j
+          </td>
+          <td>
+            <button class="btn-voir" (click)="voirDossier(d.id); $event.stopPropagation()">Voir</button>
+          </td>
+        </tr>
+        <tr *ngIf="dossiers().length === 0">
+          <td colspan="6" class="vide-msg">Aucun dossier trouvé.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PAGINATION -->
+  <div class="pagination" *ngIf="!chargement() && totalPages > 1">
+    <span class="pagination-info">
+      {{ (page - 1) * taille + 1 }}–{{ minVal(page * taille, total()) }} sur {{ total() }}
+    </span>
+    <div class="pagination-controls">
+      <button class="btn-page" (click)="allerPage(page - 1)" [disabled]="page === 1">‹</button>
+      <button
+        *ngFor="let p of pages"
+        class="btn-page"
+        [class.actif]="p === page"
+        (click)="allerPage(p)">
+        {{ p }}
+      </button>
+      <button class="btn-page" (click)="allerPage(page + 1)" [disabled]="page === totalPages">›</button>
+    </div>
+  </div>
+
+  <!-- TOTAL -->
+  <div class="liste-footer" *ngIf="!chargement()">
+    <span>{{ total() }} dossier(s) au total</span>
+  </div>
+
+</div>

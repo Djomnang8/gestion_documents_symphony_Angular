@@ -1,0 +1,29 @@
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    # Service Email
+    App\Service\EmailService:
+        arguments:
+            $fromEmail: 'noreply@gestion-documents.cm'
+            $fromName:  'Gestion Documents'
+
+    # Listener JWT
+    App\EventListener\JwtCreatedListener:
+        arguments:
+            - '@doctrine.orm.entity_manager'
+        tags:
+            - { name: kernel.event_listener, event: lexik_jwt_authentication.on_jwt_created, method: onJWTCreated }
+    
+    # ✅ CORRECTION : AuthenticationSuccessListener était absent — ajouté ici
+    App\EventListener\AuthenticationSuccessListener:
+        tags:
+            - { name: kernel.event_listener, event: lexik.jwt_authentication.on_authentication_success, method: onAuthenticationSuccessResponse }

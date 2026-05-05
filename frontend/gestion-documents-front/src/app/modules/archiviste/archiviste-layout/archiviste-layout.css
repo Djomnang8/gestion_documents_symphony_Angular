@@ -1,0 +1,81 @@
+/* src/app/modules/archiviste/archiviste-layout/archiviste-layout.css */
+@import url('../../../../styles.css');
+
+/* ═══════════════════════════════════════════════
+   COULEURS SPÉCIFIQUES MAQUETTE 5 — ARCHIVISTE
+   (violet #6A1B9A)
+   ═══════════════════════════════════════════════ */
+
+:host {
+  --color-sidebar-bg-top:    #6A1B9A;
+  --color-sidebar-bg-bot:    #4A0E72;
+  --color-sidebar-text:      rgba(255, 255, 255, 0.75);
+  --color-sidebar-hover:     rgba(255, 255, 255, 0.10);
+  --color-sidebar-active:    rgba(206, 147, 216, 0.22);
+  --color-active-accent:     #CE93D8;
+  --color-active-border:     #CE93D8;
+  --color-logo-title:        #ffffff;
+  --color-logo-subtitle:     #CE93D8;
+  --color-user-avatar-bg:    linear-gradient(135deg, #CE93D8, #B8860B);
+  --color-user-nom:          #ffffff;
+  --color-user-role:         #CE93D8;
+  --color-toggle:            rgba(255, 255, 255, 0.75);
+  --color-logout-hover-bg:   rgba(255, 80, 80, 0.22);
+  --color-logout-hover:      #ff8a8a;
+  --color-main-bg:           #FAFAFA;
+}
+
+/* Sidebar */
+.sidebar {
+  background: linear-gradient(180deg, var(--color-sidebar-bg-top) 0%, var(--color-sidebar-bg-bot) 100%);
+  box-shadow: var(--shadow-sidebar);
+}
+
+/* Toggle */
+.toggle-btn { color: var(--color-toggle); }
+.toggle-btn:hover { background: rgba(255, 255, 255, 0.15); }
+
+/* Logo */
+.logo-title    { color: var(--color-logo-title); }
+.logo-subtitle { color: var(--color-logo-subtitle); }
+
+/* Nav items */
+.nav-item { color: var(--color-sidebar-text); }
+
+.nav-item:hover {
+  background: var(--color-sidebar-hover);
+  color: #ffffff;
+  border-left-color: var(--color-active-accent);
+}
+
+.nav-item.active {
+  background: var(--color-sidebar-active);
+  color: #ffffff;
+  border-left-color: var(--color-active-border);
+}
+
+.nav-item.active .nav-icon { color: var(--color-active-accent); }
+
+/* User bloc */
+.user-avatar {
+  background: var(--color-user-avatar-bg);
+  color: #fff;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+.user-nom  { color: var(--color-user-nom); }
+.user-role { color: var(--color-user-role); }
+
+/* Déconnexion */
+.deconnexion-btn {
+  color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+.deconnexion-btn:hover {
+  background: var(--color-logout-hover-bg);
+  color: var(--color-logout-hover);
+  border-color: rgba(255, 80, 80, 0.35);
+}
+
+/* Main content */
+.main-content { background: var(--color-main-bg); }

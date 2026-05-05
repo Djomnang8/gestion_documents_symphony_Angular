@@ -1,0 +1,96 @@
+<!-- src/app/modules/public_citoyen/navbar-public/navbar-public.html -->
+<!-- Sélecteur de langue présent ici (desktop dans .navbar-liens + mobile dans .mobile-controls) -->
+<nav class="navbar-publique">
+  <div class="navbar-container">
+
+    <!-- LOGO -->
+    <a class="navbar-logo" routerLink="/public">
+      <div class="logo-icone">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="6" y="4" width="22" height="28" rx="3"
+                fill="#2ECC71" opacity="0.2" stroke="#2ECC71" stroke-width="2"/>
+          <rect x="10" y="8" width="14" height="2" rx="1" fill="#2ECC71"/>
+          <rect x="10" y="13" width="14" height="2" rx="1" fill="#2ECC71"/>
+          <rect x="10" y="18" width="9"  height="2" rx="1" fill="#2ECC71"/>
+          <circle cx="28" cy="28" r="8" fill="#27AE60"/>
+          <path d="M24 28l3 3 5-5" stroke="white"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="logo-texte">
+        <span class="logo-titre">{{ 'navbar.ged' | translate }}</span>
+        <span class="logo-sous-titre">{{ 'navbar.sous_titre' | translate }}</span>
+      </div>
+    </a>
+
+    <!-- LIENS DESKTOP -->
+    <div class="navbar-liens" [class.ouvert]="menuOuvert">
+      <a routerLink="/public"
+         routerLinkActive="actif"
+         [routerLinkActiveOptions]="{exact:true}"
+         class="lien-nav">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="16">
+          <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414
+                   1.414L4 10.414V17a1 1 0 001 1h3a1 1 0 001-1v-2a1 1
+                   0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h3a1 1 0 001-1v-6.586
+                   l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+        </svg>
+        {{ 'common.accueil' | translate }}
+      </a>
+
+      <a routerLink="/public/depot"
+         routerLinkActive="actif"
+         class="lien-nav lien-depot">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="16">
+          <path fill-rule="evenodd"
+                d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1
+                   1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0
+                   111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                clip-rule="evenodd"/>
+        </svg>
+        {{ 'common.deposer' | translate }}
+      </a>
+
+      <a routerLink="/public/suivi"
+         routerLinkActive="actif"
+         class="lien-nav">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="16">
+          <path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"/>
+          <path fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 00-3.446
+                   6.032l-2.261 2.26a1 1 0 101.414 1.415l2.261-2.261A4 4 0
+                   1011 5z"
+                clip-rule="evenodd"/>
+        </svg>
+        {{ 'common.suivre' | translate }}
+      </a>
+
+      <button class="btn-connexion" (click)="allerVersConnexion()">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="16">
+          <path fill-rule="evenodd"
+                d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm10.293
+                   9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1
+                   0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293
+                   1.293z"
+                clip-rule="evenodd"/>
+        </svg>
+        {{ 'common.espace_employes' | translate }}
+      </button>
+
+      <!-- Sélecteur langue — visible sur desktop dans la barre de navigation -->
+      <app-language-switcher class="citizen-lang-switcher"></app-language-switcher>
+    </div>
+
+    <!-- CONTRÔLES MOBILES : langue + burger (visibles sans ouvrir le menu) -->
+    <div class="mobile-controls">
+      <app-language-switcher class="citizen-lang-switcher"></app-language-switcher>
+      <button class="burger" (click)="toggleMenu()"
+              [class.actif]="menuOuvert" aria-label="Menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+
+  </div>
+</nav>

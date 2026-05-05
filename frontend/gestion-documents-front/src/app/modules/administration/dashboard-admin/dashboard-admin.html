@@ -1,0 +1,71 @@
+<!-- src/app/modules/administration/dashboard-admin/dashboard-admin.html -->
+<div class="page-header">
+  <h1>📊 Tableau de bord Administrateur</h1>
+  <span class="subtitle">Vue globale du système — 30 derniers jours</span>
+</div>
+
+@if (loading) {
+  <div class="loading">Chargement des statistiques…</div>
+}
+
+@if (!loading && stats) {
+  <!-- KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card bordeaux">
+      <span class="kpi-icon">📁</span>
+      <div class="kpi-info">
+        <span class="kpi-value">{{ stats.totalDossiers }}</span>
+        <span class="kpi-label">Total dossiers</span>
+      </div>
+    </div>
+    <div class="kpi-card turquoise">
+      <span class="kpi-icon">✅</span>
+      <div class="kpi-info">
+        <span class="kpi-value">{{ stats.utilisateursActifs }}</span>
+        <span class="kpi-label">Utilisateurs actifs</span>
+      </div>
+    </div>
+    <div class="kpi-card coral">
+      <span class="kpi-icon">🚫</span>
+      <div class="kpi-info">
+        <span class="kpi-value">{{ stats.utilisateursListeNoire }}</span>
+        <span class="kpi-label">Liste noire</span>
+      </div>
+    </div>
+    <div class="kpi-card jaune">
+      <span class="kpi-icon">👤</span>
+      <div class="kpi-info">
+        <span class="kpi-value">{{ stats.totalUtilisateurs }}</span>
+        <span class="kpi-label">Total utilisateurs</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dossiers par statut -->
+  <div class="cards-row">
+    <div class="card">
+      <h2>Dossiers par statut</h2>
+      <div class="statut-list">
+        @for (s of stats.dossiersParStatut; track s.statut) {
+          <div class="statut-row">
+            <span class="statut-badge" [style.background]="getStatutColor(s.statut)">{{ s.statut }}</span>
+            <div class="statut-bar-wrap">
+              <div class="statut-bar" [style.width.%]="(s.count / stats!.totalDossiers) * 100"
+                   [style.background]="getStatutColor(s.statut)"></div>
+            </div>
+            <span class="statut-count">{{ s.count }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    
+  </div>
+
+  <!-- Liens rapides -->
+  <div class="quick-links">
+    <a routerLink="/administration/utilisateurs" class="ql-btn">👥 Gérer les utilisateurs</a>
+    <a routerLink="/administration/journaux" class="ql-btn">📋 Voir les journaux</a>
+    <!--<a routerLink="/administration/roles" class="ql-btn">🔑 Gérer les rôles</a>-->
+  </div>
+}

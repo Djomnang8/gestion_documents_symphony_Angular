@@ -1,0 +1,97 @@
+/* src/app/modules/agent/agent-layout/agent-layout.css */
+/* Importe le layout partagé */
+@import url('../../../../styles.css');
+
+/* ═══════════════════════════════════════════════
+   COULEURS SPÉCIFIQUES MAQUETTE 4 — AGENT
+   (bleu nuit #0D1B2A)
+   ═══════════════════════════════════════════════ */
+
+:host {
+  --color-sidebar-bg:       #0D1B2A;
+  --color-sidebar-text:     rgba(255, 255, 255, 0.55);
+  --color-sidebar-hover:    rgba(255, 255, 255, 0.08);
+  --color-sidebar-active:   rgba(41, 128, 185, 0.22);
+  --color-active-accent:    #5DADE2;
+  --color-active-border:    #2980B9;
+  --color-logo-title:       #ffffff;
+  --color-logo-subtitle:    rgba(255, 255, 255, 0.35);
+  --color-user-avatar-bg:   linear-gradient(135deg, #2980B9, #1A5276);
+  --color-user-nom:         rgba(255, 255, 255, 0.88);
+  --color-user-role:        rgba(255, 255, 255, 0.38);
+  --color-toggle:           rgba(255, 255, 255, 0.65);
+  --color-nouveau-bg:       rgba(39, 174, 96, 0.13);
+  --color-nouveau-text:     rgba(39, 174, 96, 0.85);
+  --color-nouveau-border:   rgba(39, 174, 96, 0.22);
+  --color-nouveau-hover:    #2ECC71;
+  --color-logout-hover-bg:  rgba(231, 76, 60, 0.16);
+  --color-logout-hover:     #E74C3C;
+  --color-main-bg:          #F0F4F8;
+}
+
+/* Sidebar */
+.sidebar {
+  background: var(--color-sidebar-bg);
+  box-shadow: var(--shadow-sidebar);
+}
+
+/* Toggle */
+.toggle-btn { color: var(--color-toggle); }
+.toggle-btn:hover { background: rgba(255, 255, 255, 0.12); }
+
+/* Logo */
+.logo-title    { color: var(--color-logo-title); }
+.logo-subtitle { color: var(--color-logo-subtitle); }
+
+/* Nav items */
+.nav-item {
+  color: var(--color-sidebar-text);
+}
+.nav-item:hover {
+  background: var(--color-sidebar-hover);
+  color: rgba(255, 255, 255, 0.88);
+  border-left-color: var(--color-active-border);
+}
+.nav-item.active {
+  background: var(--color-sidebar-active);
+  color: var(--color-active-accent);
+  border-left-color: var(--color-active-border);
+}
+.nav-item.active .nav-icon { color: var(--color-active-accent); }
+
+/* Item Nouveau dossier — couleur verte spéciale */
+.nav-item-nouveau {
+  background: var(--color-nouveau-bg);
+  color: var(--color-nouveau-text) !important;
+  border: 1px solid var(--color-nouveau-border);
+  border-left: 3px solid transparent;
+  margin: 4px 8px;
+  border-radius: 7px;
+}
+.nav-item-nouveau:hover {
+  background: rgba(39, 174, 96, 0.22) !important;
+  color: var(--color-nouveau-hover) !important;
+}
+
+/* User bloc */
+.user-avatar {
+  background: var(--color-user-avatar-bg);
+  color: #fff;
+  border-radius: 8px;
+}
+.user-nom  { color: var(--color-user-nom); }
+.user-role { color: var(--color-user-role); }
+
+/* Déconnexion */
+.deconnexion-btn {
+  color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.deconnexion-btn:hover {
+  background: var(--color-logout-hover-bg);
+  color: var(--color-logout-hover);
+  border-color: rgba(231, 76, 60, 0.3);
+}
+
+/* Main content */
+.main-content { background: var(--color-main-bg); }

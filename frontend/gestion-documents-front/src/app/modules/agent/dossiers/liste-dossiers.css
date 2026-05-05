@@ -1,0 +1,213 @@
+/* src/app/modules/agent/dossiers/liste-dossiers.css */
+
+.liste-wrapper {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'DM Sans', 'Roboto', sans-serif;
+  padding: 24px 32px;
+  max-width: 1100px;
+  font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif;
+  /* Pas de overflow hidden — la page elle-même ne défile pas grâce au tableau scrollable */
+}
+
+
+/* ─── EN-TÊTE ─── */
+.liste-entete { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.liste-titre { font-size: 1.4rem; font-weight: 800; color: #1A252F; margin: 0; }
+.entete-actions { display: flex; gap: 10px; align-items: center; }
+
+.btn-export {
+  background: white; border: 1.5px solid #DDE3EA; color: #566573;
+  padding: 8px 14px; border-radius: 8px; font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-export:hover { border-color: #2980B9; color: #2980B9; }
+
+.btn-nouveau {
+  background: #2980B9; color: white; border: none;
+  padding: 9px 18px; border-radius: 9px; font-size: 0.88rem; font-weight: 700;
+  text-decoration: none; cursor: pointer; transition: background 0.15s;
+}
+.btn-nouveau:hover { background: #1A5276; }
+
+/* ─── BARRE DE FILTRES ─── */
+.filtres-barre {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px; background: white; border-radius: 12px;
+  margin-bottom: 16px; box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  overflow-x: auto; /* scroll horizontal sur mobile */
+  flex-wrap: nowrap;
+  -webkit-overflow-scrolling: touch;
+}
+
+.filtre-recherche {
+  display: flex; align-items: center; gap: 6px;
+  background: #F8F9FA; border: 1.5px solid #E9ECEF;
+  border-radius: 8px; padding: 0 10px;
+  flex: 0 0 200px; min-width: 140px;
+}
+.recherche-icone { color: #A0ADB8; flex-shrink: 0; }
+.input-recherche {
+  border: none; background: transparent; outline: none;
+  font-size: 0.85rem; color: #1A252F; width: 100%; padding: 8px 0;
+}
+
+.select-statut {
+  flex: 0 0 150px; padding: 8px 10px;
+  border: 1.5px solid #E9ECEF; border-radius: 8px;
+  font-size: 0.84rem; color: #1A252F; background: #F8F9FA; outline: none; cursor: pointer;
+}
+.select-statut:focus { border-color: #2980B9; }
+
+.input-date {
+  flex: 0 0 136px; padding: 8px 10px;
+  border: 1.5px solid #E9ECEF; border-radius: 8px;
+  font-size: 0.83rem; color: #1A252F; background: #F8F9FA; outline: none;
+}
+.input-date:focus { border-color: #2980B9; }
+
+.btn-filtrer {
+  padding: 8px 16px; background: #2980B9; color: white; border: none;
+  border-radius: 8px; font-size: 0.84rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.btn-filtrer:hover { background: #1A5276; }
+
+.btn-reinit {
+  padding: 8px 10px; background: #FDEDEC; color: #C0392B; border: none;
+  border-radius: 8px; font-size: 0.84rem; font-weight: 700; cursor: pointer;
+}
+.btn-reinit:hover { background: #FADBD8; }
+
+/* ─── ALERTES / CHARGEMENT ─── */
+.alerte-erreur {
+  padding: 12px 16px; border-radius: 10px; margin-bottom: 14px;
+  background: #FDEDEC; color: #C0392B; font-size: 0.9rem;
+}
+.chargement-zone {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 60px; color: #7F8C9A;
+}
+.spinner {
+  width: 28px; height: 28px; border: 3px solid #E9ECEF;
+  border-top-color: #2980B9; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── TABLEAU — COLONNES FIXES, SCROLL VERTICAL INTERNE ─── */
+/*
+  CORRECTIF COLONNES COLLÉES SUR MOBILE :
+  - table-layout: fixed avec des largeurs définies sur chaque <th>
+  - Le tbody scrolle en interne (max 10 lignes)
+  - Les thead + tbody tr sont en display:table pour préserver les colonnes
+*/
+.tableau-conteneur {
+  background: white; border-radius: 14px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+  overflow: hidden; margin-bottom: 16px;
+}
+
+.tableau-dossiers {
+  width: 100%; border-collapse: collapse; font-size: 0.87rem;
+}
+
+.tableau-dossiers thead {
+  position: sticky; top: 0; background: #F8F9FA; z-index: 1;
+  display: table; width: 100%; table-layout: fixed;
+}
+
+.tableau-dossiers thead tr {
+  border-bottom: 2px solid #E9ECEF;
+}
+
+.tableau-dossiers th {
+  padding: 12px 10px;
+  font-size: 0.73rem; font-weight: 700; color: #7F8C9A;
+  text-align: left; white-space: nowrap; overflow: hidden;
+}
+
+/* Largeurs des colonnes — table-layout: fixed */
+.col-numero  { width: 150px; }
+.col-citoyen { width: auto; }
+.col-statut  { width: 110px; }
+.col-date    { width: 100px; }
+.col-jours   { width: 70px; text-align: center; }
+.col-action  { width: 70px; }
+
+/* Zone de défilement interne : max ~10 lignes */
+.tableau-dossiers tbody {
+  display: block; max-height: 520px;
+  overflow-y: auto; overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tableau-dossiers tbody tr {
+  display: table; width: 100%; table-layout: fixed;
+  border-bottom: 1px solid #F5F7FA;
+  transition: background 0.12s; cursor: pointer;
+}
+.tableau-dossiers tbody tr:hover { background: #F0F6FF; }
+.tableau-dossiers tbody tr:last-child { border-bottom: none; }
+
+.tableau-dossiers td {
+  padding: 12px 10px; color: #1A252F; vertical-align: middle;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Styles colonnes données */
+td.col-numero { font-family: 'Courier New', monospace; font-weight: 700; color: #2980B9; }
+td.col-citoyen { font-weight: 600; }
+td.col-date { color: #7F8C9A; font-size: 0.82rem; }
+td.col-jours { font-weight: 700; text-align: center; }
+td.col-jours.retard { color: #E74C3C; }
+.vide-msg { text-align: center; color: #A0ADB8; padding: 40px; font-size: 0.9rem; }
+
+/* ─── BADGES STATUT ─── */
+.badge-statut {
+  display: inline-block; padding: 3px 8px; border-radius: 50px;
+  font-size: 0.71rem; font-weight: 700; white-space: nowrap;
+}
+.badge-recu      { background: #EBF5FB; color: #1A5276; }
+.badge-encours   { background: #FEF5E7; color: #7D6608; }
+.badge-transfere { background: #F4ECF7; color: #6C3483; }
+.badge-rejete    { background: #FDEDEC; color: #922B21; }
+.badge-termine   { background: #EAFAF1; color: #1D6A39; }
+.badge-archive   { background: #F0F3F4; color: #4D5656; }
+.badge-default   { background: #EEF2F7; color: #5D6D7E; }
+
+/* ─── BOUTON VOIR ─── */
+.btn-voir {
+  padding: 5px 10px; border: none; border-radius: 6px;
+  background: #EBF5FB; color: #2980B9; font-size: 0.78rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+}
+.btn-voir:hover { background: #D6EAF8; }
+
+/* ─── PAGINATION ─── */
+.pagination {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 4px; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;
+}
+.pagination-info { font-size: 0.82rem; color: #7F8C9A; }
+.pagination-controls { display: flex; gap: 4px; flex-wrap: wrap; }
+.btn-page {
+  min-width: 34px; height: 34px; padding: 0 8px;
+  border: 1.5px solid #E9ECEF; border-radius: 7px;
+  background: white; color: #566573; font-size: 0.84rem; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-page:hover:not(:disabled) { border-color: #2980B9; color: #2980B9; }
+.btn-page.actif { background: #2980B9; color: white; border-color: #2980B9; }
+.btn-page:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── FOOTER ─── */
+.liste-footer { font-size: 0.8rem; color: #A0ADB8; text-align: right; padding: 4px 0; }
+
+/* ─── RESPONSIVE MOBILE ─── */
+@media (max-width: 768px) {
+  .liste-wrapper { padding: 12px; }
+  .liste-entete { flex-wrap: wrap; gap: 10px; }
+  .filtres-barre { padding: 10px; }
+  .tableau-dossiers tbody { max-height: 400px; }
+  /* Sur mobile : masquer les dates pour gagner de la place */
+  td.col-date, th.col-date { display: none; }
+}

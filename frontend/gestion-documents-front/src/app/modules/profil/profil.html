@@ -1,0 +1,146 @@
+<!-- src/app/modules/profil/profil.html -->
+<div class="profil-wrapper">
+
+  <!-- HEADER -->
+  <div class="profil-header">
+    <div class="avatar-zone">
+      <div class="avatar-grand">{{ initiales }}</div>
+      <div class="avatar-info">
+        <h1 class="profil-nom">{{ user?.prenom }} {{ user?.nom }}</h1>
+        <span class="profil-role">{{ user?.role }}</span>
+        <span class="profil-email">{{ user?.email }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONGLETS -->
+  <div class="onglets-barre">
+    <button class="onglet-btn" [class.actif]="onglet==='infos'"     (click)="onglet='infos'">👤 Mes informations</button>
+    <button class="onglet-btn" [class.actif]="onglet==='securite'"  (click)="onglet='securite'">🔒 Sécurité</button>
+    <button class="onglet-btn" [class.actif]="onglet==='activites'" (click)="onglet='activites'; chargerActivites()">📋 Mes activités récentes</button>
+  </div>
+
+  <!-- ══ ONGLET INFOS ══════════════════════════════════════════ -->
+  @if (onglet === 'infos') {
+    <div class="section-card">
+      <h3 class="section-titre-sm">Informations personnelles</h3>
+      <div class="form-grille">
+        <div class="form-champ"><label>Prénom</label><input type="text"  [(ngModel)]="prenomEdit" placeholder="Prénom" /></div>
+        <div class="form-champ"><label>Nom</label>   <input type="text"  [(ngModel)]="nomEdit"    placeholder="Nom" /></div>
+        <div class="form-champ"><label>Email</label>  <input type="email" [(ngModel)]="emailEdit"  placeholder="Email" /></div>
+        <div class="form-champ"><label>Téléphone</label><input type="tel" [(ngModel)]="telEdit"   placeholder="+237 6XX XXX XXX" /></div>
+      </div>
+      <button class="btn-sauvegarder" (click)="sauvegarderProfil()" [disabled]="enCoursEdit">
+        @if (enCoursEdit) { <span class="spin-mini"></span> } Enregistrer
+      </button>
+      @if (msgEdit) {
+        <div class="msg-feedback" [class.msg-ok]="msgEdit.startsWith('✅')" [class.msg-err]="msgEdit.startsWith('❌')">{{ msgEdit }}</div>
+      }
+    </div>
+  }
+
+  <!-- ══ ONGLET SÉCURITÉ ═══════════════════════════════════════ -->
+  @if (onglet === 'securite') {
+    <div class="section-card">
+      <h3 class="section-titre-sm">Changer le mot de passe</h3>
+      <div class="form-grille">
+        <div class="form-champ form-champ--full">
+          <label>Mot de passe actuel</label>
+          <div class="input-mdp-zone">
+            <input [type]="showAncien ? 'text' : 'password'" [(ngModel)]="ancienMdp" placeholder="Mot de passe actuel" />
+            <button type="button" class="btn-oeil" (click)="showAncien=!showAncien">{{ showAncien ? '🙈' : '👁' }}</button>
+          </div>
+        </div>
+        <div class="form-champ">
+          <label>Nouveau mot de passe</label>
+          <div class="input-mdp-zone">
+            <input [type]="showNouveau ? 'text' : 'password'" [(ngModel)]="nouveauMdp" placeholder="Nouveau (min. 8 car.)" />
+            <button type="button" class="btn-oeil" (click)="showNouveau=!showNouveau">{{ showNouveau ? '🙈' : '👁' }}</button>
+          </div>
+        </div>
+        <div class="form-champ">
+          <label>Confirmer</label>
+          <input type="password" [(ngModel)]="confirmMdp" placeholder="Confirmer" />
+        </div>
+      </div>
+      <button class="btn-sauvegarder" (click)="changerMotDePasse()" [disabled]="enCoursMdp">
+        @if (enCoursMdp) { <span class="spin-mini"></span> } Mettre à jour
+      </button>
+      @if (msgMdp) {
+        <div class="msg-feedback" [class.msg-ok]="msgMdp.startsWith('✅')" [class.msg-err]="msgMdp.startsWith('❌')">{{ msgMdp }}</div>
+      }
+    </div>
+  }
+
+  <!-- ══ ONGLET ACTIVITÉS ══════════════════════════════════════
+       Les activités sont lues depuis la base de données
+       via GET /api/journaux/mes-activites
+       Chaque action (connexion, upload, changement statut…)
+       est enregistrée dans la table Journaux par le backend.
+       ════════════════════════════════════════════════════════ -->
+  @if (onglet === 'activites') {
+    <div class="section-card">
+      <h3 class="section-titre-sm">Mes activités récentes</h3>
+
+      <!-- Filtres par date -->
+      <div class="filtres-date-barre">
+        <div class="filtre-champ">
+          <label>Du</label>
+          <input type="date" [(ngModel)]="filtreDateDebut" />
+        </div>
+        <div class="filtre-champ">
+          <label>Au</label>
+          <input type="date" [(ngModel)]="filtreDateFin" />
+        </div>
+        <button class="btn-filtrer" (click)="appliquerFiltresDate()">Filtrer</button>
+        <button class="btn-reinit"  (click)="reinitialiserFiltres()">Réinitialiser</button>
+      </div>
+
+      @if (chargActiv()) {
+        <div class="loading-mini"><div class="spinner-sm"></div><span>Chargement…</span></div>
+      }
+
+      @if (!chargActiv()) {
+        @if (activites().length === 0) {
+          <div class="vide-msg">📋 Aucune activité enregistrée pour cette période.</div>
+        }
+
+        @if (activites().length > 0) {
+          <div class="activites-liste">
+            @for (a of activites(); track a.id) {
+              <div class="activite-item">
+                <div class="activ-icone">{{ iconModule(a.module) }}</div>
+                <div class="activ-corps">
+                  <div class="activ-titre">
+                    <span class="activ-module">{{ a.module }}</span>
+                    <span class="activ-action">· {{ a.action }}</span>
+                    <span class="activ-niveau"
+                          [style.color]="couleurNiveau(a.niveauId)"
+                          [style.background]="couleurNiveau(a.niveauId) + '18'">
+                      {{ labelNiveau(a.niveauId) }}
+                    </span>
+                  </div>
+                  @if (a.details) { <div class="activ-details">{{ a.details }}</div> }
+                  <div class="activ-meta">
+                    {{ formatDate(a.dateAction) }}   <!-- ← dateAction -->
+                    @if (a.adresseIp) { <span class="activ-ip">· IP : {{ a.adresseIp }}</span> }
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- Pagination -->
+          @if (totalPages > 1) {
+            <div class="pagination-barre">
+              <button class="page-btn" (click)="pagePrecedente()" [disabled]="pageActivites === 1">← Précédent</button>
+              <span class="page-info">Page {{ pageActivites }} / {{ totalPages }} · {{ totalActivites }} activité(s)</span>
+              <button class="page-btn" (click)="pageSuivante()" [disabled]="pageActivites >= totalPages">Suivant →</button>
+            </div>
+          }
+        }
+      }
+    </div>
+  }
+
+</div>

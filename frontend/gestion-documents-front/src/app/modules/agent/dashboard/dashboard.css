@@ -1,0 +1,179 @@
+/* src/app/modules/agent/dashboard/dashboard.css */
+
+/* ─── WRAPPER ─── */
+.dashboard-wrapper {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  padding: 24px 32px;
+  max-width: 1100px;
+}
+
+/* ─── PAGE HEADER (override pour M4 : ajouter heure + bouton) ─── */
+.page-header { margin-bottom: 24px; }
+.page-title  { font-size: 1.55rem; font-weight: 400; color: #1A252F; }
+.page-title strong { font-weight: 800; }
+.page-subtitle { color: #7F8C9A; font-size: 0.85rem; }
+.heure { font-size: 1.55rem; font-weight: 700; color: #2980B9; font-variant-numeric: tabular-nums; }
+
+.btn-nouveau {
+  background: #2980B9; color: white; border: none;
+  padding: 10px 20px; border-radius: 10px; font-size: 0.9rem; font-weight: 700;
+  text-decoration: none; cursor: pointer; transition: background 0.15s;
+  font-family: 'Inter', sans-serif;
+}
+.btn-nouveau:hover { background: #1A5276; }
+
+/* ─── KPI GRILLE ─── */
+.kpi-grille {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.kpi-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+  border-left: 4px solid transparent;
+  transition: all 0.2s;
+}
+.kpi-card:hover { box-shadow: 0 4px 14px rgba(0, 0, 0, 0.10); transform: translateY(-1px); }
+.kpi-cliquable { cursor: pointer; }
+.kpi-bleu   { border-left-color: #3498DB; }
+.kpi-orange { border-left-color: #E67E22; }
+.kpi-vert   { border-left-color: #27AE60; }
+.kpi-rouge  { border-left-color: #E74C3C; }
+
+.kpi-icone  { font-size: 2rem; }
+.kpi-valeur { font-size: 2rem; font-weight: 800; color: #1A252F; line-height: 1; }
+.kpi-label  { font-size: 0.82rem; color: #7F8C9A; margin-top: 4px; }
+.kpi-badge  {
+  display: inline-block; font-size: 0.72rem; font-weight: 600;
+  color: #A0ADB8; background: #F0F3F4;
+  padding: 2px 8px; border-radius: 20px; margin-top: 6px;
+}
+.kpi-badge--alerte { background: #FDEDEC; color: #E74C3C; }
+
+/* ─── CHARGEMENT ─── */
+.chargement-zone {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 60px; color: #7F8C9A;
+}
+.spinner {
+  width: 28px; height: 28px; border: 3px solid #E9ECEF;
+  border-top-color: #2980B9; border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── SECTION RÉCENTS ─── */
+.section-recents {
+  background: white; border-radius: 16px;
+  padding: 20px 24px; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.06);
+}
+.section-entete {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+}
+.section-entete h2 { font-size: 1rem; font-weight: 700; color: #1A252F; margin: 0; }
+.lien-voir-tout { font-size: 0.85rem; color: #2980B9; text-decoration: none; font-weight: 600; }
+.lien-voir-tout:hover { text-decoration: underline; }
+
+/* ─── TABLEAU RÉCENTS ─── */
+.tableau-wrapper { overflow-x: auto; }
+.tableau-recents { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+.tableau-recents thead tr { border-bottom: 2px solid #E9ECEF; }
+.tableau-recents th {
+  padding: 10px 14px; font-size: 0.74rem; font-weight: 700;
+  color: #7F8C9A; text-align: left; white-space: nowrap;
+}
+.tableau-recents td { padding: 12px 14px; color: #1A252F; border-bottom: 1px solid #F5F7FA; }
+.tableau-recents tbody tr:hover { background: #F8FBFF; }
+.tableau-recents tbody tr:last-child td { border-bottom: none; }
+
+.col-numero  { font-family: 'Courier New', monospace; font-size: 0.82rem; font-weight: 700; color: #2980B9; }
+.col-citoyen { font-weight: 600; }
+.col-date    { color: #7F8C9A; font-size: 0.82rem; }
+.col-jours   { font-weight: 700; text-align: center; }
+.col-jours.retard { color: #E74C3C; }
+.vide-msg    { text-align: center; color: #A0ADB8; padding: 30px; }
+
+/* ─── BADGES STATUT ─── */
+.badge-statut {
+  display: inline-block; padding: 3px 10px; border-radius: 50px;
+  font-size: 0.73rem; font-weight: 700; white-space: nowrap;
+}
+.badge-recu      { background: #EBF5FB; color: #1A5276; }
+.badge-encours   { background: #FEF5E7; color: #7D6608; }
+.badge-transfere { background: #F4ECF7; color: #6C3483; }
+.badge-rejete    { background: #FDEDEC; color: #922B21; }
+.badge-termine   { background: #EAFAF1; color: #1D6A39; }
+.badge-archive   { background: #F0F3F4; color: #4D5656; }
+
+.btn-voir {
+  padding: 5px 12px; border: none; border-radius: 6px;
+  background: #EBF5FB; color: #2980B9; font-size: 0.8rem; font-weight: 700;
+  cursor: pointer; transition: all 0.15s; font-family: 'Inter', sans-serif;
+}
+.btn-voir:hover { background: #D6EAF8; }
+
+/* ─── MODAL DOSSIERS EN RETARD ─── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, 0.45);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+}
+.modal-panneau {
+  background: white; border-radius: 16px; width: 90%; max-width: 720px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.22); overflow: hidden;
+  max-height: 80vh; display: flex; flex-direction: column;
+}
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; color: white;
+}
+.modal-header--danger { background: #E74C3C; }
+.modal-titre   { margin: 0; font-size: 1rem; font-weight: 700; }
+.modal-fermer  {
+  background: rgba(255, 255, 255, 0.2); border: none; color: white;
+  width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+}
+.modal-fermer:hover { background: rgba(255, 255, 255, 0.35); }
+.modal-corps   { padding: 22px; overflow-y: auto; flex: 1; }
+
+.retard-tableau-wrapper { overflow-x: auto; max-height: 400px; overflow-y: auto; }
+.tableau-retard { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+.tableau-retard th {
+  padding: 10px 14px; font-size: 0.74rem; font-weight: 700;
+  color: #7F8C9A; text-align: left; background: #F8F9FA; position: sticky; top: 0;
+}
+.tableau-retard td { padding: 11px 14px; border-bottom: 1px solid #F5F7FA; }
+.tableau-retard tbody tr:hover { background: #FFF5F5; }
+
+.retard-info   { margin-top: 14px; font-size: 0.84rem; color: #E74C3C; font-weight: 600; text-align: center; }
+.vide-section  { text-align: center; padding: 40px; color: #27AE60; font-weight: 600; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 900px) {
+  .dashboard-wrapper { padding: 16px; }
+  .kpi-grille { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .page-header-right { width: 100%; justify-content: space-between; }
+  .heure { font-size: 1.2rem; }
+  .btn-nouveau { padding: 6px 12px; font-size: 0.8rem; }
+  .tableau-recents { min-width: 600px; }
+  .section-recents { padding: 16px; }
+}
+
+@media (max-width: 600px) {
+  .kpi-grille { grid-template-columns: 1fr; }
+  .dashboard-wrapper { padding: 12px; }
+  .kpi-card { padding: 14px; }
+  .kpi-valeur { font-size: 1.5rem; }
+  .modal-panneau { width: 95%; }
+  .tableau-retard { min-width: 500px; }
+  .btn-voir { padding: 4px 8px; font-size: 0.75rem; }
+}

@@ -1,0 +1,42 @@
+/* src/app/modules/administration/dashboard-admin/dashboard-admin.css */
+.page-header { margin-bottom: 1.5rem; }
+.page-header h1 { margin: 0; font-size: 1.5rem; color: #2C3E50; }
+.subtitle { color: #7F8C8D; font-size: .9rem; }
+.loading { text-align: center; padding: 2rem; color: #7F8C8D; }
+
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.kpi-card {
+  display: flex; align-items: center; gap: 1rem;
+  border-radius: 10px; padding: 1.25rem; color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.1);
+}
+.kpi-card.bordeaux  { background: linear-gradient(135deg, #8B0000, #C0392B); }
+.kpi-card.turquoise { background: linear-gradient(135deg, #17A589, #1ABC9C); }
+.kpi-card.coral     { background: linear-gradient(135deg, #FF6B6B, #E74C3C); }
+.kpi-card.jaune     { background: linear-gradient(135deg, #F4D03F, #F39C12); }
+.kpi-icon  { font-size: 2rem; }
+.kpi-value { display: block; font-size: 2rem; font-weight: 700; line-height: 1; }
+.kpi-label { font-size: .82rem; opacity: .9; }
+
+.cards-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+.card { background: #fff; border-radius: 10px; padding: 1.25rem; box-shadow: 0 2px 6px rgba(0,0,0,.07); }
+.card h2 { margin: 0 0 1rem; font-size: 1rem; color: #2C3E50; }
+
+.statut-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .6rem; }
+.statut-badge { border-radius: 12px; padding: 2px 10px; font-size: .75rem; font-weight: 600; color: #fff; min-width: 80px; text-align: center; }
+.statut-bar-wrap { flex: 1; background: #ECF0F1; border-radius: 4px; height: 8px; overflow: hidden; }
+.statut-bar { height: 100%; border-radius: 4px; transition: width .3s; }
+.statut-count { font-weight: 700; color: #2C3E50; min-width: 30px; text-align: right; }
+
+.niveau-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: .6rem; }
+.niveau-chip { border-radius: 12px; padding: 4px 12px; font-size: .78rem; font-weight: 600; color: #fff; }
+.niveau-count { font-weight: 700; color: #2C3E50; }
+
+.quick-links { display: flex; gap: 1rem; flex-wrap: wrap; }
+.ql-btn {
+  background: #8B0000; color: #fff; border-radius: 8px;
+  padding: .6rem 1.2rem; text-decoration: none; font-size: .9rem; font-weight: 600;
+  transition: background .15s;
+}
+.ql-btn:hover { background: #A00000; }
+
+@media (max-width: 768px) { .cards-row { grid-template-columns: 1fr; } }

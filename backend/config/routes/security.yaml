@@ -1,0 +1,7 @@
+# Ce fichier gère les routes de déconnexion (logout) si nécessaire.
+# La configuration de sécurité est dans config/packages/security.yaml
+
+#_security_logout:
+ #   resource: security.route_loader.logout
+  #  type: service
+    

@@ -1,0 +1,113 @@
+<!-- src/app/modules/administration/journaux-systeme/journaux-systeme.html -->
+<div class="page-header">
+  <div class="page-header-left">
+    <h1 class="page-title">📋 Journaux Système</h1>
+    <p class="page-subtitle">Toutes les actions effectuées par les utilisateurs</p>
+  </div>
+  <div class="page-header-right">
+    <button class="btn-export" (click)="exporter()">↓ Exporter CSV</button>
+  </div>
+</div>
+
+<!-- FILTRES -->
+<div class="filtres-zone">
+  <div class="filtre-groupe">
+    <label>Module</label>
+    <select [(ngModel)]="filtreModule" (change)="filtrer()">
+      <option value="">Tous</option>
+      @for (m of modules(); track m) {
+        <option [value]="m">{{ m }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="filtre-groupe">
+    <label>Action</label>
+    <input type="text" [(ngModel)]="filtreAction" (keyup.enter)="filtrer()" placeholder="Ex: Connexion…" />
+  </div>
+
+  <div class="filtre-groupe">
+    <label>Niveau</label>
+    <select [(ngModel)]="filtreNiveau" (change)="filtrer()">
+      @for (n of niveaux; track n.id) {
+        <option [value]="n.id">{{ n.label }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="filtre-groupe">
+    <label>Du</label>
+    <input type="date" [(ngModel)]="filtreDateDebut" (change)="filtrer()" />
+  </div>
+
+  <div class="filtre-groupe">
+    <label>Au</label>
+    <input type="date" [(ngModel)]="filtreDateFin" (change)="filtrer()" />
+  </div>
+
+  <div class="filtre-actions">
+    <button class="btn-filtrer" (click)="filtrer()">Filtrer</button>
+    <button class="btn-reinit"  (click)="reinitialiser()">✕ Réinitialiser</button>
+  </div>
+</div>
+
+<!-- TABLEAU -->
+@if (chargement()) {
+  <div class="chargement">Chargement…</div>
+} @else {
+  <div class="table-wrap">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Utilisateur</th>
+          <th>Module</th>
+          <th>Action</th>
+          <th>Niveau</th>
+          <th>Détails</th>
+          <th>IP</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (j of journaux(); track j.id) {
+          <tr>
+            <td class="col-date">{{ formatDate(j.dateAction) }}</td>
+            <td class="col-user">{{ j.utilisateur }}</td>
+            <td><span class="badge-module">{{ j.module }}</span></td>
+            <td>{{ j.action }}</td>
+            <td>
+              <span class="badge-niveau" [ngClass]="niveauClass(j.niveauId)">
+                {{ niveauIcon(j.niveauId) }} {{ niveauLabel(j.niveauId) }}
+              </span>
+            </td>
+            <td class="col-details">{{ j.details || '—' }}</td>
+            <td class="col-ip">{{ j.adresseIp || '—' }}</td>
+          </tr>
+        }
+        @if (journaux().length === 0) {
+          <tr><td colspan="7" class="vide-msg">Aucun journal trouvé.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PAGINATION -->
+  @if (totalPages > 1) {
+    <div class="pagination">
+      <span class="pagination-info">
+        {{ (page - 1) * pageSize + 1 }}–{{ Math.min(page * pageSize, total()) }} sur {{ total() }}
+      </span>
+      <div class="pagination-controls">
+        <button class="btn-page" (click)="allerPage(page - 1)" [disabled]="page === 1">‹</button>
+        @for (p of pages; track p) {
+          <button class="btn-page" [class.actif]="p === page" (click)="allerPage(p)">{{ p }}</button>
+        }
+        <button class="btn-page" (click)="allerPage(page + 1)" [disabled]="page === totalPages">›</button>
+      </div>
+    </div>
+  }
+
+  <div class="liste-footer">
+    <span>{{ total() }} entrée(s) au total</span>
+  </div>
+}

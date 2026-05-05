@@ -1,0 +1,278 @@
+<!-- src/app/modules/public_citoyen/accueil/accueil.html -->
+<div class="page-accueil">
+  <app-navbar-public></app-navbar-public>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg-shapes">
+      <div class="shape shape-1"></div>
+      <div class="shape shape-2"></div>
+      <div class="shape shape-3"></div>
+    </div>
+    <div class="hero-contenu">
+      <div class="hero-badge">
+        <span class="badge-point"></span>
+        {{ 'accueil.badge' | translate }}
+      </div>
+      <h1 class="hero-titre">
+        {{ 'accueil.titre1' | translate }}<br>
+        <span class="titre-accent">{{ 'accueil.titre_accent' | translate }}</span>
+      </h1>
+      <p class="hero-description">
+        {{ 'accueil.description' | translate }}
+      </p>
+      <div class="hero-actions">
+        <button class="btn-principal" (click)="allerVersDepot()">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20">
+            <path fill-rule="evenodd"
+                  d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1
+                     1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1
+                     0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                  clip-rule="evenodd"/>
+          </svg>
+          {{ 'accueil.deposer_btn' | translate }}
+        </button>
+        <button class="btn-secondaire" (click)="allerVersSuivi()">
+          <svg viewBox="0 0 20 20" fill="currentColor" width="20">
+            <path d="M9 9a2 2 0 114 0 2 2 0 01-4 0z"/>
+            <path fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a4 4 0 00-3.446
+                     6.032l-2.261 2.26a1 1 0 101.414 1.415l2.261-2.261A4 4
+                     0 1011 5z"
+                  clip-rule="evenodd"/>
+          </svg>
+          {{ 'accueil.suivre_btn' | translate }}
+        </button>
+      </div>
+    </div>
+    <div class="hero-illustration">
+      <div class="illustration-carte carte-principale">
+        <div class="carte-header">
+          <div class="carte-dot vert"></div>
+          <span>{{ 'accueil.exemple_carte' | translate }}</span>
+        </div>
+        <div class="carte-statut">
+          <div class="statut-badge en-cours">{{ 'accueil.statut_en_cours' | translate }}</div>
+        </div>
+        <div class="carte-progress">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:60%"></div>
+          </div>
+          <span>60% {{ 'accueil.progress_label' | translate }}</span>
+        </div>
+        <div class="carte-etapes">
+          <div class="etape fait">✓ Reçu</div>
+          <div class="etape fait">✓ En cours</div>
+          <div class="etape">○ Terminé</div>
+        </div>
+      </div>
+      <div class="illustration-carte carte-notif">
+        <div class="notif-icone">⚖</div>
+        <div class="notif-texte">
+          <strong>Expert assigné</strong>
+          <span>Votre dossier est en cours d'analyse</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ÉTAPES -->
+  <section class="section-etapes">
+    <div class="container">
+      <h2 class="section-titre">{{ 'accueil.etapes_titre' | translate }}</h2>
+      <p class="section-sous-titre">{{ 'accueil.etapes_sous_titre' | translate }}</p>
+      <div class="etapes-grille">
+        <div class="etape-carte">
+          <div class="etape-numero">01</div>
+          <div class="etape-icone" style="background:#e8f8f0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#2ECC71" stroke-width="2" width="32">
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+          </div>
+          <h3>{{ 'accueil.etape1_titre' | translate }}</h3>
+          <p>{{ 'accueil.etape1_desc' | translate }}</p>
+        </div>
+        <div class="etape-connecteur">
+          <div class="ligne-pointillee"></div>
+          <svg viewBox="0 0 20 20" fill="#2ECC71" width="20">
+            <path fill-rule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10
+                     7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0
+                     010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clip-rule="evenodd"/>
+          </svg>
+          <div class="ligne-pointillee"></div>
+        </div>
+        <div class="etape-carte">
+          <div class="etape-numero">02</div>
+          <div class="etape-icone" style="background:#e8f4fd">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3498DB" stroke-width="2" width="32">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <h3>{{ 'accueil.etape2_titre' | translate }}</h3>
+          <p>{{ 'accueil.etape2_desc' | translate }}</p>
+        </div>
+        <div class="etape-connecteur">
+          <div class="ligne-pointillee"></div>
+          <svg viewBox="0 0 20 20" fill="#2ECC71" width="20">
+            <path fill-rule="evenodd"
+                  d="M7.293 14.707a1 1 0 010-1.414L10.586 10
+                     7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0
+                     010 1.414l-4 4a1 1 0 01-1.414 0z"
+                  clip-rule="evenodd"/>
+          </svg>
+          <div class="ligne-pointillee"></div>
+        </div>
+        <div class="etape-carte">
+          <div class="etape-numero">03</div>
+          <div class="etape-icone" style="background:#fef9e7">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#E67E22" stroke-width="2" width="32">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+          <h3>{{ 'accueil.etape3_titre' | translate }}</h3>
+          <p>{{ 'accueil.etape3_desc' | translate }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- NOS SERVICES JURIDIQUES -->
+  <section class="section-services">
+    <div class="container">
+      <h2 class="section-titre">{{ 'accueil.services_titre' | translate }}</h2>
+      <p class="section-sous-titre">{{ 'accueil.services_sous_titre' | translate }}</p>
+
+      <div class="services-grille">
+        <!-- Droit des Affaires -->
+        <div class="service-carte" (click)="allerAuDepot(1)">
+          <div class="service-icone" style="background:#EBF5FB; color:#1A5276;">⚖</div>
+          <h3 class="service-titre">{{ 'accueil.affaires_titre' | translate }}</h3>
+          <p class="service-desc">{{ 'accueil.affaires_desc' | translate }}</p>
+          <div class="service-docs">
+            <p class="docs-titre">📎 {{ 'accueil.docs_requis' | translate }}</p>
+            <ul>
+              <li>Copie du contrat ou de l'accord commercial</li>
+              <li>Statuts de la société (si applicable)</li>
+              <li>Pièce d'identité du représentant légal</li>
+              <li>Tout document lié à la transaction</li>
+            </ul>
+          </div>
+          <button class="service-btn">{{ 'accueil.deposer_service_btn' | translate }}</button>
+        </div>
+
+        <!-- Droit de la Famille -->
+        <div class="service-carte" (click)="allerAuDepot(2)">
+          <div class="service-icone" style="background:#F9EBEA; color:#922B21;">👨‍👩‍👧</div>
+          <h3 class="service-titre">{{ 'accueil.famille_titre' | translate }}</h3>
+          <p class="service-desc">{{ 'accueil.famille_desc' | translate }}</p>
+          <div class="service-docs">
+            <p class="docs-titre">📎 {{ 'accueil.docs_requis' | translate }}</p>
+            <ul>
+              <li>Acte de mariage ou livret de famille</li>
+              <li>Pièces d'identité des parties concernées</li>
+              <li>Actes de naissance des enfants (si garde)</li>
+              <li>Jugement ou ordonnance existant (si applicable)</li>
+            </ul>
+          </div>
+          <button class="service-btn">{{ 'accueil.deposer_service_btn' | translate }}</button>
+        </div>
+
+        <!-- Droit Pénal -->
+        <div class="service-carte" (click)="allerAuDepot(3)">
+          <div class="service-icone" style="background:#FEF9E7; color:#7D6608;">🔒</div>
+          <h3 class="service-titre">{{ 'accueil.penal_titre' | translate }}</h3>
+          <p class="service-desc">{{ 'accueil.penal_desc' | translate }}</p>
+          <div class="service-docs">
+            <p class="docs-titre">📎 {{ 'accueil.docs_requis' | translate }}</p>
+            <ul>
+              <li>Procès-verbal de plainte (si disponible)</li>
+              <li>Convocation ou citation à comparaître</li>
+              <li>Pièce d'identité</li>
+              <li>Tout document relatif aux faits</li>
+            </ul>
+          </div>
+          <button class="service-btn">{{ 'accueil.deposer_service_btn' | translate }}</button>
+        </div>
+
+        <!-- Droit Immobilier -->
+        <div class="service-carte" (click)="allerAuDepot(4)">
+          <div class="service-icone" style="background:#EAFAF1; color:#1D6A39;">🏠</div>
+          <h3 class="service-titre">{{ 'accueil.immobilier_titre' | translate }}</h3>
+          <p class="service-desc">{{ 'accueil.immobilier_desc' | translate }}</p>
+          <div class="service-docs">
+            <p class="docs-titre">📎 {{ 'accueil.docs_requis' | translate }}</p>
+            <ul>
+              <li>Titre foncier ou acte de propriété</li>
+              <li>Contrat de bail ou promesse de vente</li>
+              <li>Plan cadastral (si disponible)</li>
+              <li>Pièce d'identité du propriétaire/locataire</li>
+            </ul>
+          </div>
+          <button class="service-btn">{{ 'accueil.deposer_service_btn' | translate }}</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RACCOURCIS RAPIDES -->
+  <section class="section-raccourcis">
+    <div class="container">
+      <div class="raccourcis-grille">
+        <div class="raccourci-carte depot" (click)="allerVersDepot()">
+          <div class="raccourci-icone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="40">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <div class="raccourci-texte">
+            <h3>{{ 'accueil.raccourci_depot_titre' | translate }}</h3>
+            <p>{{ 'accueil.raccourci_depot_desc' | translate }}</p>
+          </div>
+          <div class="raccourci-fleche">→</div>
+        </div>
+        <div class="raccourci-carte suivi" (click)="allerVersSuivi()">
+          <div class="raccourci-icone">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="40">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </div>
+          <div class="raccourci-texte">
+            <h3>{{ 'accueil.raccourci_suivi_titre' | translate }}</h3>
+            <p>{{ 'accueil.raccourci_suivi_desc' | translate }}</p>
+          </div>
+          <div class="raccourci-fleche">→</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer-public">
+    <div class="container">
+      <div class="footer-contenu">
+        <div class="footer-logo">
+          <span class="logo-titre">⚖ {{ 'accueil.footer_titre' | translate }}</span>
+          <span>{{ 'accueil.footer_sous_titre' | translate }}</span>
+        </div>
+        <div class="footer-liens">
+          <a href="#">{{ 'accueil.footer_aide' | translate }}</a>
+          <a href="#">{{ 'accueil.footer_mentions' | translate }}</a>
+          <a href="#">{{ 'accueil.footer_contact' | translate }}</a>
+        </div>
+      </div>
+      <div class="footer-bas">
+        <span>© {{ currentYear }} — {{ 'accueil.footer_titre' | translate }} · {{ 'accueil.footer_droits' | translate }}</span>
+        <a routerLink="/auth/login" class="lien-agent">{{ 'accueil.footer_acces_agent' | translate }}</a>
+      </div>
+    </div>
+  </footer>
+</div>

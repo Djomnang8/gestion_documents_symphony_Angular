@@ -1,0 +1,44 @@
+security:
+    password_hashers:
+        App\Entity\Utilisateur:
+            algorithm: bcrypt
+
+    providers:
+        app_user_provider:
+            entity:
+                class: App\Entity\Utilisateur
+                property: email
+
+    firewalls:
+        dev:
+            pattern: ^/(_(profiler|wdt)|css|images|js)/
+            security: false
+
+        # Routes publiques — PAS de JWT requis
+        public_routes:
+            pattern: ^/api/(public|dossiers/public|dossiers/suivi)
+            security: false
+
+        login:
+            pattern: ^/api/auth/login
+            stateless: true
+            json_login:
+                check_path: /api/auth/login
+                username_path: email
+                password_path: motDePasse
+                success_handler: lexik_jwt_authentication.handler.authentication_success
+                failure_handler: lexik_jwt_authentication.handler.authentication_failure
+
+        api:
+            pattern: ^/api
+            stateless: true
+            jwt: ~
+
+    access_control:
+        - { path: ^/api/auth/login,              roles: PUBLIC_ACCESS }
+        - { path: ^/api/public,                  roles: PUBLIC_ACCESS }
+        - { path: ^/api/dossiers/public,         roles: PUBLIC_ACCESS }
+        - { path: ^/api/dossiers/suivi,          roles: PUBLIC_ACCESS }
+        - { path: ^/api/services$,               roles: PUBLIC_ACCESS }
+        - { path: ^/api/fichiers/download,       roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/api,                         roles: IS_AUTHENTICATED_FULLY }

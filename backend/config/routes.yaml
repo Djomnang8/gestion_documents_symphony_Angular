@@ -1,0 +1,9 @@
+# config/routes.yaml
+controllers:
+    resource: ../src/Controller/
+    type: attribute
+
+api_login_check:
+    path: /api/auth/login
+    controller: lexik_jwt_authentication.controller.token_authentication
+    methods: POST

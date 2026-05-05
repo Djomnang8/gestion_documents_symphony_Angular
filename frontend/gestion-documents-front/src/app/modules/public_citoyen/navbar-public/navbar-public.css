@@ -1,0 +1,192 @@
+/* src/app/modules/public_citoyen/navbar-public/navbar-public.css */
+
+.navbar-publique {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(46, 204, 113, 0.2);
+  box-shadow: 0 2px 20px rgba(0,0,0,0.06);
+}
+
+.navbar-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.navbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+
+.navbar-logo .logo-icone svg {
+  width: 40px;
+  height: 40px;
+  filter: drop-shadow(0 2px 4px rgba(46,204,113,0.3));
+}
+
+.navbar-logo .logo-texte {
+  display: flex;
+  flex-direction: column;
+}
+
+.navbar-logo .logo-titre {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a2e1a;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.navbar-logo .logo-sous-titre {
+  font-size: 0.6rem;
+  color: #7f8c8d;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* ── Liens desktop ─────────────────────────────────── */
+.navbar-liens {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.lien-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: #555;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.lien-nav svg { opacity: 0.7; transition: opacity 0.2s; }
+.lien-nav:hover { background: #f0fdf4; color: #27AE60; }
+.lien-nav:hover svg { opacity: 1; }
+.lien-nav.actif { color: #27AE60; background: #f0fdf4; font-weight: 600; }
+
+.lien-depot {
+  background: #f0fdf4;
+  color: #27AE60;
+  border: 1px solid rgba(46,204,113,0.3);
+}
+.lien-depot:hover { background: #2ECC71; color: white; border-color: #2ECC71; }
+
+.btn-connexion {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #2C3E50;
+  color: white;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-connexion:hover {
+  background: #34495e;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(44,62,80,0.3);
+}
+
+/* ── Contrôles mobiles (sélecteur langue + burger) ─── */
+/* Cachés sur desktop, visibles sur mobile */
+.mobile-controls {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.burger {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  flex-shrink: 0;
+}
+
+.burger span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: #2C3E50;
+  border-radius: 2px;
+  transition: all 0.3s;
+}
+
+.burger.actif span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+.burger.actif span:nth-child(2) { opacity: 0; }
+.burger.actif span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE ≤ 768px
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Cacher le sélecteur de langue dans le menu déroulant desktop
+     (il est déjà visible dans .mobile-controls) */
+  .navbar-liens app-language-switcher {
+    display: none;
+  }
+
+  /* Afficher les contrôles mobiles */
+  .mobile-controls {
+    display: flex;
+  }
+
+  /* Menu déroulant burger */
+  .navbar-liens {
+    display: none;
+    position: absolute;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background: white;
+    flex-direction: column;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+    gap: 4px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+    z-index: 999;
+  }
+
+  .navbar-liens.ouvert { display: flex; }
+  .navbar-liens .lien-nav,
+  .navbar-liens .btn-connexion { width: 100%; justify-content: center; }
+}
+
+/* ══════════════════════════════════════════════════════
+   RESPONSIVE ≤ 500px
+   ══════════════════════════════════════════════════════ */
+@media (max-width: 500px) {
+  .navbar-container { padding: 0 10px; }
+  .navbar-logo .logo-sous-titre { display: none; }
+  .navbar-logo .logo-titre { font-size: 1.1rem; }
+}

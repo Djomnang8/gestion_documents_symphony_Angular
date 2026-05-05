@@ -1,0 +1,11 @@
+<!-- src/app/shared/language-switcher/language-switcher.html -->
+<div class="lang-switcher">
+  <select
+    class="lang-select"
+    [value]="currentLang()"
+    (change)="setLang($any($event.target).value)"
+    [attr.aria-label]="currentLang() === 'fr' ? 'Changer de langue' : 'Change language'">
+    <option value="fr">🇫🇷 Français</option>
+    <option value="en">🇬🇧 English</option>
+  </select>
+</div>

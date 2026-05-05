@@ -1,0 +1,351 @@
+<!-- src/app/modules/archiviste/historique-versions/historique-versions.html -->
+<!--
+  CONDITION DE RESTAURATION :
+  Le bouton "Restaurer" n'apparaît que si (!v.estActive).
+  Autrement dit : seule une version NON ACTIVE peut être restaurée.
+  La version courante (estActive = true, badge "Active") n'a pas de bouton,
+  car elle est déjà la version en cours d'utilisation.
+  La restauration rend une ancienne version active et désactive toutes les autres.
+  Cette opération est RÉVERSIBLE (on peut restaurer une autre version ensuite).
+-->
+<div class="page">
+
+  <!-- EN-TÊTE -->
+  <header class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        @if (dossierSelectionne()) {
+          <button class="btn-retour" (click)="retourListe()" aria-label="Retour à la liste">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"/>
+            </svg>
+          </button>
+        }
+        <span>🕐</span>
+        <span class="title-text">
+          @if (!dossierSelectionne()) {
+            Historique des versions
+          } @else {
+            {{ dossierSelectionne()!.numero }}
+          }
+        </span>
+      </h1>
+      <p class="page-subtitle">
+        @if (!dossierSelectionne()) {
+          Sélectionnez un dossier pour consulter et restaurer ses versions
+        } @else {
+          {{ dossierSelectionne()!.titre }} — {{ dossierSelectionne()!.citoyen }}
+        }
+      </p>
+    </div>
+
+    <div class="header-actions">
+      @if (dossierSelectionne() && !comparaisonActive()) {
+        <button class="btn-comparer" (click)="activerComparaison()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 3M21 7.5H7.5"/>
+          </svg>
+          <span>Comparer v1/vN</span>
+        </button>
+      }
+      @if (comparaisonActive()) {
+        <button class="btn-fermer-comp" (click)="comparaisonActive.set(false)">
+          Fermer ✕
+        </button>
+      }
+    </div>
+  </header>
+
+  @if (messageSucces()) {
+    <div class="toast-success" role="alert">✅ {{ messageSucces() }}</div>
+  }
+
+  @if (erreur()) {
+    <div class="toast-erreur" role="alert">⚠️ {{ erreur() }}</div>
+  }
+
+  @if (chargement()) {
+    <div class="chargement-zone">
+      <div class="spinner"></div>
+      <span>Chargement…</span>
+    </div>
+  }
+
+  <!-- ══════════════ VUE LISTE DOSSIERS ══════════════ -->
+  @if (!dossierSelectionne() && !chargement()) {
+
+    <div class="search-box">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"/>
+      </svg>
+      <input
+        type="text"
+        placeholder="Rechercher un dossier archivé…"
+        [value]="recherche()"
+        (input)="setRecherche($any($event.target).value)"
+        class="search-input" />
+    </div>
+
+    @if (dossiersFiltres().length === 0) {
+      <div class="vide-etat">
+        <span>🔍</span>
+        <p>Aucun dossier archivé trouvé.</p>
+      </div>
+    }
+
+    <div class="dossiers-list">
+      @for (d of dossiersPagination(); track d.id) {
+        <div class="dossier-row" (click)="selectionnerDossier(d)" role="button" tabindex="0"
+             (keydown.enter)="selectionnerDossier(d)">
+          <div class="dossier-icon">📁</div>
+          <div class="dossier-info">
+            <span class="dossier-numero">{{ d.numero }}</span>
+            <span class="dossier-titre">{{ d.titre }}</span>
+            <span class="dossier-citoyen">👤 {{ d.citoyen }}</span>
+          </div>
+          <div class="dossier-versions-count">
+            <span class="versions-badge">{{ d.versions.length }} version(s)</span>
+          </div>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="chevron">
+            <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5"/>
+          </svg>
+        </div>
+      }
+    </div>
+
+    @if (totalPages() > 1) {
+      <div class="pagination">
+        <button class="btn-page" [disabled]="pageCourante() === 1" (click)="changerPage(pageCourante() - 1)">‹ Préc.</button>
+        <span class="page-info">{{ pageCourante() }} / {{ totalPages() }}</span>
+        <button class="btn-page" [disabled]="pageCourante() === totalPages()" (click)="changerPage(pageCourante() + 1)">Suiv. ›</button>
+      </div>
+    }
+  }
+
+  <!-- ══════════════ VUE DÉTAIL : TIMELINE VERSIONS ══════════════ -->
+  @if (dossierSelectionne() && !comparaisonActive() && !chargement()) {
+
+    <!-- Info bulle explicative sur la restauration -->
+    <div class="info-restauration">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="icon-info">
+        <path stroke-linecap="round" stroke-linejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/>
+      </svg>
+      <span>Seules les versions <strong>non actives</strong> peuvent être restaurées. La version <span class="badge-active-inline">Active</span> est déjà la version courante.</span>
+    </div>
+
+    <div class="timeline-section">
+      <h2 class="timeline-titre">Historique chronologique</h2>
+      <div class="timeline">
+        @for (v of dossierSelectionne()!.versions; track v.id; let last = $last) {
+          <div class="timeline-item" [class.active]="v.estActive">
+
+            <div class="timeline-dot" [class.active]="v.estActive">
+              @if (v.estActive) {
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5"/>
+                </svg>
+              } @else {
+                <span>v{{ v.numero }}</span>
+              }
+            </div>
+            @if (!last) {
+              <div class="timeline-line"></div>
+            }
+
+            <div class="version-card" [class.active]="v.estActive">
+              <div class="version-header">
+                <div class="version-meta">
+                  <span class="version-tag" [class.active]="v.estActive">
+                    Version {{ v.numero }}
+                    @if (v.estActive) { <span class="badge-active">Active</span> }
+                  </span>
+                  <span class="version-date">{{ v.dateCreation | date: 'dd/MM/yyyy à HH:mm' }}</span>
+                </div>
+                <!-- CONDITION DE RESTAURATION : !v.estActive -->
+                <!-- Le bouton n'apparaît que si la version n'est PAS déjà active -->
+                @if (!v.estActive) {
+                  <button class="btn-restaurer" (click)="ouvrirModalRestauration(v)">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>
+                    </svg>
+                    <span>Restaurer</span>
+                  </button>
+                }
+              </div>
+
+              <div class="version-body">
+                <div class="fichier-info">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"/>
+                  </svg>
+                  <span class="fichier-nom">{{ v.nomFichier }}</span>
+                  <span class="fichier-taille">{{ formatTaille(v.tailleFichier) }}</span>
+                </div>
+                <div class="version-details">
+                  <span class="detail-auteur">✍️ {{ v.auteur }}</span>
+                  @if (v.commentaire) {
+                    <span class="detail-commentaire">💬 {{ v.commentaire }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- ══════════════ VUE COMPARAISON CÔTE À CÔTE ══════════════ -->
+  @if (dossierSelectionne() && comparaisonActive() && !chargement()) {
+    <div class="comparaison-zone">
+
+      <div class="comparaison-selectors">
+        <div class="selector-block">
+          <label class="selector-label">Version gauche</label>
+          <select class="select-version" (change)="setVersionGauche(dossierSelectionne()!.versions[$any($event.target).selectedIndex])">
+            @for (v of dossierSelectionne()!.versions; track v.id) {
+              <option [selected]="versionGauche()?.id === v.id">
+                Version {{ v.numero }} — {{ v.dateCreation | date: 'dd/MM/yyyy' }}
+              </option>
+            }
+          </select>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="selector-block">
+          <label class="selector-label">Version droite</label>
+          <select class="select-version" (change)="setVersionDroite(dossierSelectionne()!.versions[$any($event.target).selectedIndex])">
+            @for (v of dossierSelectionne()!.versions; track v.id) {
+              <option [selected]="versionDroite()?.id === v.id">
+                Version {{ v.numero }} — {{ v.dateCreation | date: 'dd/MM/yyyy' }}
+              </option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="comparaison-panels">
+
+        @if (versionGauche()) {
+          <div class="panel-version">
+            <div class="panel-header gauche">
+              <span class="panel-tag">Version {{ versionGauche()!.numero }}</span>
+              <span class="panel-date">{{ versionGauche()!.dateCreation | date: 'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="panel-body">
+              <div class="panel-fichier">
+                <div class="fichier-preview">📄</div>
+                <div class="fichier-details">
+                  <p class="fichier-nom">{{ versionGauche()!.nomFichier }}</p>
+                  <p class="fichier-meta">{{ formatTaille(versionGauche()!.tailleFichier) }} · {{ versionGauche()!.typeFichier }}</p>
+                </div>
+              </div>
+              <div class="panel-info-grid">
+                <div class="panel-info">
+                  <label>Auteur</label>
+                  <span>{{ versionGauche()!.auteur }}</span>
+                </div>
+                <div class="panel-info">
+                  <label>Statut</label>
+                  <span [class.active-label]="versionGauche()!.estActive">
+                    {{ versionGauche()!.estActive ? '✅ Active' : '⏸ Archivée' }}
+                  </span>
+                </div>
+              </div>
+              @if (versionGauche()!.commentaire) {
+                <div class="panel-commentaire">
+                  <label>Note</label>
+                  <p>{{ versionGauche()!.commentaire }}</p>
+                </div>
+              }
+              @if (!versionGauche()!.estActive) {
+                <button class="btn-restaurer-panel" (click)="ouvrirModalRestauration(versionGauche()!)">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>
+                  </svg>
+                  Restaurer cette version
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        @if (versionDroite()) {
+          <div class="panel-version">
+            <div class="panel-header droite">
+              <span class="panel-tag">Version {{ versionDroite()!.numero }}</span>
+              <span class="panel-date">{{ versionDroite()!.dateCreation | date: 'dd/MM/yyyy HH:mm' }}</span>
+            </div>
+            <div class="panel-body">
+              <div class="panel-fichier">
+                <div class="fichier-preview">📄</div>
+                <div class="fichier-details">
+                  <p class="fichier-nom">{{ versionDroite()!.nomFichier }}</p>
+                  <p class="fichier-meta">{{ formatTaille(versionDroite()!.tailleFichier) }} · {{ versionDroite()!.typeFichier }}</p>
+                </div>
+              </div>
+              <div class="panel-info-grid">
+                <div class="panel-info">
+                  <label>Auteur</label>
+                  <span>{{ versionDroite()!.auteur }}</span>
+                </div>
+                <div class="panel-info">
+                  <label>Statut</label>
+                  <span [class.active-label]="versionDroite()!.estActive">
+                    {{ versionDroite()!.estActive ? '✅ Active' : '⏸ Archivée' }}
+                  </span>
+                </div>
+              </div>
+              @if (versionDroite()!.commentaire) {
+                <div class="panel-commentaire">
+                  <label>Note</label>
+                  <p>{{ versionDroite()!.commentaire }}</p>
+                </div>
+              }
+              @if (!versionDroite()!.estActive) {
+                <button class="btn-restaurer-panel" (click)="ouvrirModalRestauration(versionDroite()!)">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"/>
+                  </svg>
+                  Restaurer cette version
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+      </div>
+    </div>
+  }
+
+</div>
+
+<!-- ─── MODALE RESTAURATION ─── -->
+@if (modalRestauration()) {
+  <div class="modal-overlay" (click)="fermerModal()">
+    <div class="modal-box" (click)="$event.stopPropagation()">
+      <div class="modal-icon">🔄</div>
+      <h3 class="modal-titre">Confirmer la restauration</h3>
+      @if (versionARestaurer()) {
+        <p class="modal-texte">
+          Vous allez restaurer la <strong>Version {{ versionARestaurer()!.numero }}</strong>
+          (<em>{{ versionARestaurer()!.nomFichier }}</em>)
+          comme version active de ce dossier.
+        </p>
+        <p class="modal-alerte">
+          ⚠️ La version actuellement active sera désactivée.
+          Cette opération est réversible.
+        </p>
+      }
+      <div class="modal-actions">
+        <button class="btn-annuler" (click)="fermerModal()" [disabled]="restaurationEnCours()">Annuler</button>
+        <button class="btn-confirmer-or" (click)="confirmerRestauration()" [disabled]="restaurationEnCours()">
+          @if (restaurationEnCours()) {
+            <span class="spinner"></span> Restauration…
+          } @else {
+            Restaurer cette version
+          }
+        </button>
+      </div>
+    </div>
+  </div>
+}

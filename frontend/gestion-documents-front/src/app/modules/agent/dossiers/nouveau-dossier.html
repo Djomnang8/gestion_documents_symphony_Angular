@@ -1,0 +1,81 @@
+<div class="nouveau-wrapper">
+  <div class="nav-retour">
+    <a routerLink="/agent/dossiers" class="lien-retour">← Retour à la liste</a>
+  </div>
+
+  <div class="formulaire-carte">
+    <div class="form-entete">
+      <div class="form-icone">
+        <svg viewBox="0 0 20 20" fill="currentColor" width="22">
+          <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+          <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm4 5a1 1 0 011-1h.01a1 1 0 110 2H9a1 1 0 01-1-1zm3 0a1 1 0 011-1h3a1 1 0 110 2h-3a1 1 0 01-1-1zm-3 4a1 1 0 011-1h.01a1 1 0 110 2H9a1 1 0 01-1-1zm3 0a1 1 0 011-1h3a1 1 0 110 2h-3a1 1 0 01-1-1z" clip-rule="evenodd"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="form-titre">Nouveau dossier</h1>
+        <p class="form-sous-titre">Créer un dossier pour un citoyen</p>
+      </div>
+    </div>
+
+    <div class="alerte-erreur" *ngIf="erreur()">{{ erreur() }}</div>
+
+    <form [formGroup]="formulaire" (ngSubmit)="soumettre()" class="formulaire">
+      <!-- SECTION DOSSIER -->
+      <div class="section-form">
+        <h2 class="section-label">Informations du dossier</h2>
+        <div class="champ-groupe">
+          <label class="champ-label">Titre du dossier <span class="requis">*</span></label>
+          <input type="text" formControlName="titre" class="champ-input" [class.invalide]="estInvalide('titre')" placeholder="Ex : Demande de permis de construire…">
+          <span class="erreur-msg" *ngIf="estInvalide('titre')">Le titre doit contenir entre 5 et 200 caractères.</span>
+        </div>
+        <div class="champ-groupe">
+          <label class="champ-label">Description</label>
+          <textarea formControlName="description" rows="4" class="champ-textarea" placeholder="Décrivez le contexte de la demande…"></textarea>
+        </div>
+        <div class="champ-groupe">
+          <label class="champ-label">Service responsable <span class="requis">*</span></label>
+          <select formControlName="serviceId" class="champ-select" [class.invalide]="estInvalide('serviceId')">
+            <option value="">— Sélectionner un service —</option>
+            <option *ngFor="let s of services()" [value]="s.id">{{ s.nom }}</option>
+          </select>
+          <span class="erreur-msg" *ngIf="estInvalide('serviceId')">Veuillez sélectionner un service.</span>
+        </div>
+        <div class="champ-groupe">
+          <label class="champ-label">Document (optionnel)</label>
+          <input type="file" (change)="onFileSelected($event)" accept=".pdf,.docx,.jpg,.png" class="champ-input">
+          <small class="aide">Formats acceptés : PDF, DOCX, JPG, PNG (max 10 Mo)</small>
+        </div>
+      </div>
+
+      <!-- SECTION CITOYEN -->
+      <div class="section-form">
+        <h2 class="section-label">Informations citoyen</h2>
+        <div class="champ-groupe">
+          <label class="champ-label">Nom complet du citoyen <span class="requis">*</span></label>
+          <input type="text" formControlName="nomCitoyen" class="champ-input" [class.invalide]="estInvalide('nomCitoyen')" placeholder="Prénom Nom">
+          <span class="erreur-msg" *ngIf="estInvalide('nomCitoyen')">Le nom du citoyen est requis.</span>
+        </div>
+        <div class="champs-ligne">
+          <div class="champ-groupe">
+            <label class="champ-label">Email</label>
+            <input type="email" formControlName="emailCitoyen" class="champ-input" [class.invalide]="estInvalide('emailCitoyen')" placeholder="citoyen@email.com">
+            <span class="erreur-msg" *ngIf="estInvalide('emailCitoyen')">Email invalide.</span>
+          </div>
+          <div class="champ-groupe">
+            <label class="champ-label">Téléphone</label>
+            <input type="tel" formControlName="telephoneCitoyen" class="champ-input" placeholder="06 00 00 00 00">
+          </div>
+        </div>
+      </div>
+
+      <!-- ACTIONS -->
+      <div class="form-actions">
+        <a routerLink="/agent/dossiers" class="btn-annuler">Annuler</a>
+        <button type="submit" class="btn-creer" [disabled]="enCours()">
+          <span *ngIf="!enCours()">Créer le dossier</span>
+          <span *ngIf="enCours()">Création en cours…</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
