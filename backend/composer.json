@@ -79,8 +79,8 @@
     "scripts": {
         "auto-scripts": {
             "cache:clear": "php bin/console cache:clear --no-warmup || true",
-            "assets:install %PUBLIC_DIR%": "symfony-cmd",
-            "importmap:install": "symfony-cmd"
+             "assets:install %PUBLIC_DIR%": "php bin/console assets:install %PUBLIC_DIR% || true",
+            "importmap:install": "php bin/console importmap:install || true"
         },
         "post-install-cmd": [
             "@auto-scripts"
