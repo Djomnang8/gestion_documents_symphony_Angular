@@ -78,9 +78,9 @@
     },
     "scripts": {
         "auto-scripts": {
-            "cache:clear": "php bin/console cache:clear --no-warmup || true",
-             "assets:install %PUBLIC_DIR%": "php bin/console assets:install %PUBLIC_DIR% || true",
-            "importmap:install": "php bin/console importmap:install || true"
+            "cache:clear": "php bin/console cache:clear --no-warmup",
+             "assets:install %PUBLIC_DIR%": "php bin/console assets:install %PUBLIC_DIR%",
+            "importmap:install": "php bin/console importmap:install"
         },
         "post-install-cmd": [
             "@auto-scripts"
