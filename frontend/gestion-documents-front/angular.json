@@ -82,10 +82,11 @@
                   "maximumError": "30kB"
                 }
               ],
+              
               "fileReplacements": [
                 {
-                  "replace": "src/environments/environment.prod.ts",
-                  "with": "src/environments/environment.mobile.ts"
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
                   
                 }
               ]
