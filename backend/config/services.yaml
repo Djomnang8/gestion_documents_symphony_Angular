@@ -27,3 +27,6 @@ services:
     App\EventListener\AuthenticationSuccessListener:
         tags:
             - { name: kernel.event_listener, event: lexik.jwt_authentication.on_authentication_success, method: onAuthenticationSuccessResponse }
+
+    parameters:
+        frontend_url: '%env(FRONTEND_URL)%'
