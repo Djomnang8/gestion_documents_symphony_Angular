@@ -77,7 +77,6 @@
         "symfony/polyfill-php82": "*"
     },
     "scripts": {
-        
         "post-install-cmd": [
             "@auto-scripts"
         ],
