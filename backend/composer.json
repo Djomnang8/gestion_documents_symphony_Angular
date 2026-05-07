@@ -78,7 +78,7 @@
     },
     "scripts": {
         "auto-scripts": {
-            "cache:clear": "symfony-cmd || true",
+            "cache:clear": "php bin/console cache:clear --no-warmup || true",
             "assets:install %PUBLIC_DIR%": "symfony-cmd",
             "importmap:install": "symfony-cmd"
         },
