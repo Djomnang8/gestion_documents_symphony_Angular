@@ -8,7 +8,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "serve:ssr:gestion-documents-front": "node dist/gestion-documents-front/server/server.mjs",
-    "build:mobile": "ng build --configuration production && cp dist/gestion-documents-front/browser/index.csr.html dist/gestion-documents-front/browser/index.html",
+    
     "postbuild": "cp dist/gestion-documents-front/browser/index.csr.html dist/gestion-documents-front/browser/index.html || copy dist\\gestion-documents-front\\browser\\index.csr.html dist\\gestion-documents-front\\browser\\index.html"
 
 
