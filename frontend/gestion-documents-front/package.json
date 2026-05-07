@@ -4,8 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
+    "build": "ng build --configuration production",
+    
     "test": "ng test",
     "serve:ssr:gestion-documents-front": "node dist/gestion-documents-front/server/server.mjs",
     
