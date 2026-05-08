@@ -13,15 +13,14 @@ RUN composer install --optimize-autoloader --no-interaction --no-dev --no-script
 
 COPY . /app
 
-# Relancer l'installation au cas où le dossier vendor aurait été écrasé
+# Supprimer l'éventuel dossier vendor et relancer l'installation
 RUN rm -rf vendor && composer install --optimize-autoloader --no-interaction --no-dev --no-scripts
 
-# Assurer les droits
-RUN mkdir -p var/cache var/log && chmod -R 777 var/
+# Forcer l'installation du composant Runtime (au cas où)
+RUN composer require symfony/runtime --no-interaction --no-scripts --optimize-autoloader
 
-# Donner les droits d'exécution au script de démarrage
+RUN mkdir -p var/cache var/log && chmod -R 777 var/
 RUN chmod +x start.sh
 
 EXPOSE 8080
-
 CMD ["./start.sh"]
