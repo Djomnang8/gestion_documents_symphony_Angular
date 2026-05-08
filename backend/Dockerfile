@@ -8,20 +8,15 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 
 WORKDIR /app
 
-# Copie des fichiers de dépendances
 COPY composer.json composer.lock ./
 RUN composer install --optimize-autoloader --no-interaction --no-dev --no-scripts
 
-# Copie du reste du code
 COPY . /app
 
-# Forcer l'installation de symfony/runtime (modifie composer.json si absent)
-RUN composer require symfony/runtime --no-interaction --no-scripts --optimize-autoloader --update-no-dev
+# Réinstaller proprement après copie
+RUN rm -rf vendor && composer install --optimize-autoloader --no-interaction --no-dev --no-scripts
 
-# Réinstaller proprement
-RUN composer install --optimize-autoloader --no-interaction --no-dev --no-scripts
-
-# Générer les clés JWT (le cache:clear sera fait au démarrage)
+# Générer les clés JWT
 RUN mkdir -p config/jwt \
     && openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 \
     && openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem

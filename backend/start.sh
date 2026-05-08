@@ -1,8 +1,7 @@
 #!/bin/sh
 set -e
 
-# Nettoyer le cache de développement
-php bin/console cache:clear --env=dev
+
 
 # Générer les clés JWT si absentes
 if [ ! -f config/jwt/private.pem ]; then
