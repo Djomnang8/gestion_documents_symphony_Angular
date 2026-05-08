@@ -1,3 +1,4 @@
+#C:\TP_PROJET_B1_a_B3\GitHub\gestion_documents_symphony_Angular\backend\Dockerfile
 FROM dunglas/frankenphp:php8.5.5-bookworm
 
 # Installation des extensions PHP nécessaires
@@ -15,10 +16,18 @@ RUN php bin/console cache:clear --env=prod --no-debug --no-warmup || true
 RUN php bin/console assets:install public --symlink --relative --env=prod || true
 RUN php bin/console importmap:install || true
 
-# Générer les clés JWT si elles n'existent pas
+# Dans backend/Dockerfile, remplacez la partie génération JWT
 RUN mkdir -p config/jwt && \
-    openssl genpkey -algorithm RSA -out config/jwt/private.pem -pkeyopt rsa_keygen_bits:4096 && \
-    openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
+    openssl genpkey -algorithm RSA \
+        -out config/jwt/private.pem \
+        -pass pass:gestion_docs_jwt_passphrase \
+        -pkeyopt rsa_keygen_bits:4096 && \
+    openssl rsa -pubout \
+        -in config/jwt/private.pem \
+        -passin pass:gestion_docs_jwt_passphrase \
+        -out config/jwt/public.pem
+
+RUN echo "display_errors = On" >> /usr/local/etc/php/conf.d/custom.ini
 
 # Port exposé (Railway utilise 8080)
 EXPOSE 8080
