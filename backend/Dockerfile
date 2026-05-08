@@ -8,12 +8,10 @@ RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local
 
 WORKDIR /app
 
-COPY composer.json composer.lock ./
-RUN composer install --optimize-autoloader --no-interaction --no-dev --no-scripts
-
+# Copier tout le code source (y compris composer.json)
 COPY . /app
 
-# Réinstaller proprement après copie
+# Supprimer tout vendor existant (venant du dépôt) et installer les dépendances
 RUN rm -rf vendor && composer install --optimize-autoloader --no-interaction --no-dev --no-scripts
 
 # Générer les clés JWT
