@@ -247,6 +247,7 @@ INSERT INTO `roles_permissions` (`role_id`, `permission_id`)
 Patrick
 mbogo@gmail.com
 677000001
+asdf90
 $2y$13$J4j5nQHqwISg0fCwunqHDOjDTG0M6daD6vusidjH1yWtImALU3TE.
 1
 0

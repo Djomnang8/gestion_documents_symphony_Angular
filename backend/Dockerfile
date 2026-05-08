@@ -22,6 +22,8 @@ RUN mkdir -p config/jwt && \
     openssl rsa -pubout -in config/jwt/private.pem -out config/jwt/public.pem
 
 RUN echo "display_errors = On" >> /usr/local/etc/php/conf.d/custom.ini
+# Force rebuild – supprimer après résolution
+RUN echo "Rebuild force $(date +%s)"
 
 # Port exposé (Railway utilise 8080)
 EXPOSE 8080
