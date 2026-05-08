@@ -16,16 +16,23 @@ class PublicController extends AbstractController
     public function __construct(private EntityManagerInterface $em) {}
 
     // ── Services (accès public citoyen) ───────────────────────────────────
-    #[Route('/api/public/services', name: 'public_services', methods: ['GET'])]
-    public function services(): JsonResponse
-    {
+        #[Route('/api/public/services', name: 'public_services', methods: ['GET'])]
+public function services(): JsonResponse
+{
+    try {
         $services = $this->em->getRepository(Service::class)->findBy(['estActif' => true]);
         return $this->json(array_map(fn($s) => [
             'id'          => $s->getId(),
             'nom'         => $s->getNom(),
             'description' => $s->getDescription(),
         ], $services));
+    } catch (\Throwable $e) {
+        return new JsonResponse([
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString(),
+        ], 500);
     }
+}
 
     // ── Services (pour les agents connectés) ──────────────────────────────
     #[Route('/api/services', name: 'services_list', methods: ['GET'])]
