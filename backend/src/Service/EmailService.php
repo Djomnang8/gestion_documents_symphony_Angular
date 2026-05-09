@@ -8,7 +8,7 @@ class EmailService
 {
     public function __construct(
         private MailerInterface $mailer,
-        private string $fromEmail = 'noreply@gestion-documents.cm',
+        private string $fromEmail = 'joycedjomnang@gmail.com',
         private string $fromName  = 'Gestion Documents'
     ) {}
 
