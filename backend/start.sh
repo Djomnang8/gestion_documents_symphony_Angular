@@ -12,8 +12,5 @@ if [ ! -f config/jwt/private.pem ]; then
     echo "[start.sh] Clés JWT générées."
 fi
 
-echo "[start.sh] Génération du cache Symfony pour APP_ENV=${APP_ENV:-dev}..."
-php bin/console cache:clear --env=${APP_ENV:-dev} --no-warmup
-
 echo "[start.sh] Démarrage du serveur PHP sur le port ${PORT}..."
 exec php -S 0.0.0.0:${PORT} -t public
