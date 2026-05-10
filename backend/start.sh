@@ -12,5 +12,14 @@ if [ ! -f config/jwt/private.pem ]; then
     echo "[start.sh] Clés JWT générées."
 fi
 
+echo "[start.sh] Création des répertoires uploads..."
+mkdir -p public/uploads/citoyens public/uploads/dossiers
+chmod -R 775 public/uploads
+
 echo "[start.sh] Démarrage du serveur PHP sur le port ${PORT}..."
-exec php -S 0.0.0.0:${PORT} -t public
+exec php \
+  -d upload_max_filesize=50M \
+  -d post_max_size=50M \
+  -d memory_limit=256M \
+  -S 0.0.0.0:${PORT} \
+  -t public

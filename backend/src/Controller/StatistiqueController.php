@@ -76,7 +76,7 @@ class StatistiqueController extends AbstractController
         ]);
     }
 
-    
+
     // ── GET /api/statistiques/archiviste ──────────────────────────────────
     #[Route('/archiviste', name: 'archiviste', methods: ['GET'])]
     public function statsArchiviste(Request $request): JsonResponse
@@ -118,141 +118,112 @@ class StatistiqueController extends AbstractController
         ]);
     }
 
-    // ── GET /api/statistiques/export/pdf ──────────────────────────────────
-    // Génère un PDF via dompdf (nécessite composer require dompdf/dompdf)
-    #[Route('/export/pdf', name: 'export_pdf', methods: ['GET'])]
+     #[Route('/export/pdf', name: 'export_pdf', methods: ['GET'])]
     public function exportPdf(Request $request): Response
     {
         $periode   = $request->query->get('periode', '30j');
         $serviceId = $request->query->get('serviceId');
-        [$debut, $fin] = $this->calculerPlage($periode);
+        $conn      = $this->em->getConnection();
+        $repo      = $this->em->getRepository(Dossier::class);
 
-        $qb = $this->em->getRepository(Dossier::class)->createQueryBuilder('d')
-            ->leftJoin('d.statut', 's')->addSelect('s')
-            ->leftJoin('d.service', 'sv')->addSelect('sv')
-            ->where("s.code != 'ARCHIVE'")
-            ->andWhere('d.dateDepot >= :d')
-            ->setParameter('d', $debut);
-
-        if ($serviceId) {
-            $qb->andWhere('d.service = :sid')->setParameter('sid', (int) $serviceId);
+        $statuts = $this->em->getRepository(StatutDossier::class)->findAll();
+        $rows    = [];
+        $total   = 0;
+        foreach ($statuts as $s) {
+            if ($s->getCode() === 'ARCHIVE') continue;
+            $cnt = $repo->count(['statut' => $s]);
+            $rows[] = ['statut' => $s->getLibelle(), 'count' => $cnt];
+            $total += $cnt;
         }
 
-        $dossiers = $qb->getQuery()->getResult();
-        $total    = count($dossiers);
-        $termines = count(array_filter($dossiers, fn($d) => $d->getStatut()->getCode() === 'TERMINE'));
-        $rejetes  = count(array_filter($dossiers, fn($d) => $d->getStatut()->getCode() === 'REJETE'));
-        $tTrait   = $total > 0 ? round(($termines / $total) * 100, 1) : 0;
-        $tRejet   = $total > 0 ? round(($rejetes  / $total) * 100, 1) : 0;
+        $parService = [];
+        try {
+            $parService = $conn->executeQuery(
+                "SELECT sv.nom AS service, COUNT(d.id) AS count FROM dossiers d
+                 JOIN services sv ON d.service_id = sv.id
+                 JOIN statuts_dossier sd ON d.statut_id = sd.id
+                 WHERE sd.code != 'ARCHIVE' GROUP BY sv.nom ORDER BY count DESC"
+            )->fetchAllAssociative();
+        } catch (\Throwable $e) {}
 
-        // Grouper par statut
-        $parStatut = [];
-        foreach ($dossiers as $d) {
-            $lib = $d->getStatut()->getLibelle();
-            $parStatut[$lib] = ($parStatut[$lib] ?? 0) + 1;
+        $date = (new \DateTimeImmutable())->format('d/m/Y');
+        $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'>
+<style>
+  body{font-family:Arial,sans-serif;font-size:12px;padding:20px}
+  h1{color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:8px}
+  h2{color:#34495e;margin-top:20px}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th{background:#3498db;color:white;padding:8px;text-align:left}
+  td{padding:6px 8px;border-bottom:1px solid #ddd}
+  tr:nth-child(even){background:#f8f9fa}
+  .kpi{display:inline-block;background:#ecf0f1;padding:10px 20px;margin:5px;border-radius:4px}
+  @media print{button{display:none}}
+</style></head><body>
+<h1>Rapport Statistiques — {$date}</h1>
+<div class='kpi'><strong>Total dossiers actifs :</strong> {$total}</div>
+<h2>Répartition par statut</h2>
+<table><tr><th>Statut</th><th>Nombre</th></tr>";
+        foreach ($rows as $r) {
+            $html .= "<tr><td>{$r['statut']}</td><td>{$r['count']}</td></tr>";
         }
-
-        // ── Génération HTML → PDF ──────────────────────────────────────────
-        if (class_exists(\Dompdf\Dompdf::class)) {
-            $html = $this->genererHtmlRapport($debut, $fin, $total, $termines, $tTrait, $tRejet, $parStatut);
-
-            $options = new \Dompdf\Options();
-            $options->set('defaultFont', 'DejaVu Sans');
-            $dompdf = new \Dompdf\Dompdf($options);
-            $dompdf->loadHtml($html);
-            $dompdf->setPaper('A4', 'portrait');
-            $dompdf->render();
-
-            $pdf      = $dompdf->output();
-            $filename = 'rapport_statistiques_' . date('Ymd') . '.pdf';
-
-            return new Response($pdf, 200, [
-                'Content-Type'        => 'application/pdf',
-                'Content-Disposition' => "attachment; filename=\"$filename\"",
-            ]);
+        $html .= "</table>";
+        if ($parService) {
+            $html .= "<h2>Répartition par service</h2><table><tr><th>Service</th><th>Dossiers</th></tr>";
+            foreach ($parService as $r) {
+                $html .= "<tr><td>{$r['service']}</td><td>{$r['count']}</td></tr>";
+            }
+            $html .= "</table>";
         }
+        $html .= "<br><small>Rapport généré le {$date}</small></body></html>";
 
-        // Fallback : retourner le HTML si dompdf n'est pas installé
-        $html = $this->genererHtmlRapport($debut, $fin, $total, $termines, $tTrait, $tRejet, $parStatut);
-        return new Response($html, 200, ['Content-Type' => 'text/html; charset=utf-8']);
+        return new Response($html, 200, [
+            'Content-Type'        => 'text/html; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="rapport_' . date('Ymd') . '.html"',
+        ]);
     }
 
-    // ── GET /api/statistiques/export/excel ────────────────────────────────
-    // Génère un fichier Excel via PhpSpreadsheet (nécessite composer require phpoffice/phpspreadsheet)
     #[Route('/export/excel', name: 'export_excel', methods: ['GET'])]
     public function exportExcel(Request $request): Response
     {
-        $periode   = $request->query->get('periode', '30j');
-        $serviceId = $request->query->get('serviceId');
-        [$debut, $fin] = $this->calculerPlage($periode);
+        $conn = $this->em->getConnection();
+        $repo = $this->em->getRepository(Dossier::class);
 
-        $qb = $this->em->getRepository(Dossier::class)->createQueryBuilder('d')
-            ->leftJoin('d.statut', 's')->addSelect('s')
-            ->leftJoin('d.service', 'sv')->addSelect('sv')
-            ->where("s.code != 'ARCHIVE'")
-            ->andWhere('d.dateDepot >= :d')
-            ->setParameter('d', $debut);
-
-        if ($serviceId) {
-            $qb->andWhere('d.service = :sid')->setParameter('sid', (int) $serviceId);
+        $statuts    = $this->em->getRepository(StatutDossier::class)->findAll();
+        $parStatut  = [];
+        foreach ($statuts as $s) {
+            $parStatut[$s->getLibelle()] = $repo->count(['statut' => $s]);
         }
 
-        $dossiers = $qb->getQuery()->getResult();
+        $parService = [];
+        try {
+            $parService = $conn->executeQuery(
+                "SELECT sv.nom AS service, COUNT(d.id) AS count FROM dossiers d
+                 JOIN services sv ON d.service_id = sv.id
+                 GROUP BY sv.nom ORDER BY count DESC"
+            )->fetchAllAssociative();
+        } catch (\Throwable $e) {}
 
-        if (class_exists(\PhpOffice\PhpSpreadsheet\Spreadsheet::class)) {
-            $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet();
-            $sheet = $spreadsheet->getActiveSheet();
-            $sheet->setTitle('Statistiques');
-
-            // En-têtes
-            $sheet->fromArray(['Numéro', 'Statut', 'Service', 'Date dépôt'], null, 'A1');
-
-            // Données
-            $row = 2;
-            foreach ($dossiers as $d) {
-                $sheet->fromArray([
-                    $d->getNumero(),
-                    $d->getStatut()->getLibelle(),
-                    $d->getService()->getNom(),
-                    $d->getDateDepot()->format('d/m/Y'),
-                ], null, "A$row");
-                $row++;
-            }
-
-            // Ajuster largeur colonnes
-            foreach (['A', 'B', 'C', 'D'] as $col) {
-                $sheet->getColumnDimension($col)->setAutoSize(true);
-            }
-
-            $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
-            ob_start();
-            $writer->save('php://output');
-            $content  = ob_get_clean();
-            $filename = 'statistiques_' . date('Ymd') . '.xlsx';
-
-            return new Response($content, 200, [
-                'Content-Type'        => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'Content-Disposition' => "attachment; filename=\"$filename\"",
-            ]);
+        // Générer CSV UTF-8 (compatible Excel)
+        $bom = "\xEF\xBB\xBF"; // BOM UTF-8 pour Excel
+        $csv = $bom;
+        $csv .= "Rapport Statistiques — " . date('d/m/Y') . "\r\n\r\n";
+        $csv .= "RÉPARTITION PAR STATUT\r\n";
+        $csv .= "Statut;Nombre\r\n";
+        foreach ($parStatut as $lib => $cnt) {
+            $csv .= "{$lib};{$cnt}\r\n";
         }
-
-        // Fallback CSV si PhpSpreadsheet n'est pas installé
-        $csv = "\xEF\xBB\xBF\"Numéro\",\"Statut\",\"Service\",\"Date dépôt\"\n";
-        foreach ($dossiers as $d) {
-            $csv .= sprintf(
-                "\"%s\",\"%s\",\"%s\",\"%s\"\n",
-                $d->getNumero(),
-                $d->getStatut()->getLibelle(),
-                $d->getService()->getNom(),
-                $d->getDateDepot()->format('d/m/Y')
-            );
+        $csv .= "\r\nRÉPARTITION PAR SERVICE\r\n";
+        $csv .= "Service;Nombre\r\n";
+        foreach ($parService as $r) {
+            $csv .= "{$r['service']};{$r['count']}\r\n";
         }
 
         return new Response($csv, 200, [
-            'Content-Type'        => 'text/csv; charset=utf-8',
+            'Content-Type'        => 'application/vnd.ms-excel; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="statistiques_' . date('Ymd') . '.csv"',
         ]);
     }
+ 
 
     // ── GET /api/statistiques ─────────────────────────────────────────────
     #[Route('', name: 'index', methods: ['GET'])]

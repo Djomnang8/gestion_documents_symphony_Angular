@@ -100,10 +100,6 @@ class ArchivageController extends AbstractController
         ]);
     }
 
-    
-// ─────────────────────────────────────────────────────────────────────────────
-// PATCH ArchivageController — remplacer la méthode aArchiver()
-// ─────────────────────────────────────────────────────────────────────────────
 
     #[Route('/a-archiver', name: 'a_archiver', methods: ['GET'])]
     public function aArchiver(): JsonResponse
@@ -112,7 +108,7 @@ class ArchivageController extends AbstractController
 
         try {
             $rows = $conn->executeQuery(
-                "SELECT d.id, d.numero, d.titre, d.nom_citoyen,
+                "SELECT d.id, d.numero, d.titre, d.nom_citoyen, d.email_citoyen,
                         d.date_depot, d.date_mise_a_jour_statut,
                         sv.nom AS service_nom,
                         COUNT(v.id) AS nb_documents
@@ -121,25 +117,26 @@ class ArchivageController extends AbstractController
                  LEFT JOIN services sv ON d.service_id = sv.id
                  LEFT JOIN versions_document v ON v.dossier_id = d.id
                  WHERE s.code = 'TERMINE'
-                 GROUP BY d.id, d.numero, d.titre, d.nom_citoyen,
+                 GROUP BY d.id, d.numero, d.titre, d.nom_citoyen, d.email_citoyen,
                           d.date_depot, d.date_mise_a_jour_statut, sv.nom
                  ORDER BY d.date_mise_a_jour_statut ASC"
             )->fetchAllAssociative();
 
             return $this->json(array_map(fn($r) => [
-                'id'                  => $r['id'],
-                'numero'              => $r['numero'],
-                'titre'               => $r['titre'],
-                'nomCitoyen'          => $r['nom_citoyen'],
-                'serviceNom'          => $r['service_nom'],
-                'dateDepot'           => $r['date_depot'],
-                'dateMiseAJourStatut' => $r['date_mise_a_jour_statut'],
-                'nbDocuments'         => (int) $r['nb_documents'],
+                'id'          => $r['id'],
+                'numero'      => $r['numero'],
+                'titre'       => $r['titre'],
+                'citoyen'     => $r['nom_citoyen'],         // ← nom attendu par le frontend
+                'email'       => $r['email_citoyen'],        // ← nom attendu par le frontend
+                'service'     => $r['service_nom'],          // ← nom attendu par le frontend
+                'dateFin'     => $r['date_mise_a_jour_statut'], // ← nom attendu par le frontend
+                'nbDocuments' => (int) $r['nb_documents'],
             ], $rows));
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $this->json(['error' => $e->getMessage()], 500);
         }
     }
+ 
 
     // ── POST /api/archivage/{dossierId} ─────────────────────────────────────
     // Archivage avec fusion si même email citoyen (identique à C#)
