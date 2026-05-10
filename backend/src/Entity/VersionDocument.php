@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 class VersionDocument
 {
     #[ORM\Id]
+    #[ORM\GeneratedValue(strategy: 'NONE')]
     #[ORM\Column(type: 'string', length: 36)]
     private string $id;
 

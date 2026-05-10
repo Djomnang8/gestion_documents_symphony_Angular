@@ -100,49 +100,46 @@ class ArchivageController extends AbstractController
         ]);
     }
 
-    // ── GET /api/archivage/a-archiver ──────────────────────────────────────
-        // ── GET /api/archivage/a-archiver ──────────────────────────────────────
-#[Route('/a-archiver', name: 'a_archiver', methods: ['GET'])]
-public function aArchiver(): JsonResponse
-{
-    $statutTermine = $this->em->getRepository(StatutDossier::class)
-        ->findOneBy(['code' => 'TERMINE']);
-    if (!$statutTermine) {
-        return $this->json([]);
+    
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH ArchivageController — remplacer la méthode aArchiver()
+// ─────────────────────────────────────────────────────────────────────────────
+
+    #[Route('/a-archiver', name: 'a_archiver', methods: ['GET'])]
+    public function aArchiver(): JsonResponse
+    {
+        $conn = $this->em->getConnection();
+
+        try {
+            $rows = $conn->executeQuery(
+                "SELECT d.id, d.numero, d.titre, d.nom_citoyen,
+                        d.date_depot, d.date_mise_a_jour_statut,
+                        sv.nom AS service_nom,
+                        COUNT(v.id) AS nb_documents
+                 FROM dossiers d
+                 JOIN statuts_dossier s ON d.statut_id = s.id
+                 LEFT JOIN services sv ON d.service_id = sv.id
+                 LEFT JOIN versions_document v ON v.dossier_id = d.id
+                 WHERE s.code = 'TERMINE'
+                 GROUP BY d.id, d.numero, d.titre, d.nom_citoyen,
+                          d.date_depot, d.date_mise_a_jour_statut, sv.nom
+                 ORDER BY d.date_mise_a_jour_statut ASC"
+            )->fetchAllAssociative();
+
+            return $this->json(array_map(fn($r) => [
+                'id'                  => $r['id'],
+                'numero'              => $r['numero'],
+                'titre'               => $r['titre'],
+                'nomCitoyen'          => $r['nom_citoyen'],
+                'serviceNom'          => $r['service_nom'],
+                'dateDepot'           => $r['date_depot'],
+                'dateMiseAJourStatut' => $r['date_mise_a_jour_statut'],
+                'nbDocuments'         => (int) $r['nb_documents'],
+            ], $rows));
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
     }
-
-    // Une seule requête avec jointure et COUNT, groupé par dossier
-    $qb = $this->em->getRepository(Dossier::class)->createQueryBuilder('d')
-        ->leftJoin('d.service', 'sv')
-        ->leftJoin('d.versionsDocument', 'v')
-        ->addSelect('sv')
-        ->addSelect('COUNT(v.id) AS nbDocuments')
-        ->where('d.statut = :s')
-        ->setParameter('s', $statutTermine)
-        ->groupBy('d.id')
-        ->addGroupBy('sv.id')   // nécessaire pour MySQL en mode strict
-        ->orderBy('d.dateMiseAJourStatut', 'ASC');
-
-    $results = $qb->getQuery()->getResult();
-
-    // $results est un tableau de tableaux [0 => Dossier, 'nbDocuments' => count]
-    $data = array_map(function ($row) {
-        $d = $row[0];
-        $nbDocs = (int) $row['nbDocuments'];
-        return [
-            'id'          => $d->getId(),
-            'numero'      => $d->getNumero(),
-            'titre'       => $d->getTitre(),
-            'citoyen'     => $d->getNomCitoyen(),
-            'email'       => $d->getEmailCitoyen() ?? '',
-            'dateFin'     => $d->getDateMiseAJourStatut()->format('c'),
-            'service'     => $d->getService()->getNom(),
-            'nbDocuments' => $nbDocs,
-        ];
-    }, $results);
-
-    return $this->json($data);
-}
 
     // ── POST /api/archivage/{dossierId} ─────────────────────────────────────
     // Archivage avec fusion si même email citoyen (identique à C#)

@@ -76,85 +76,7 @@ class StatistiqueController extends AbstractController
         ]);
     }
 
-    // ── GET /api/statistiques/dossiers ────────────────────────────────────
-    #[Route('/dossiers', name: 'dossiers', methods: ['GET'])]
-    public function statsDossiers(Request $request): JsonResponse
-    {
-        $periode   = $request->query->get('periode', '30j');
-        $serviceId = $request->query->get('serviceId');
-        [$debut, $fin] = $this->calculerPlage(
-            $periode,
-            $request->query->get('dateDebut'),
-            $request->query->get('dateFin')
-        );
-
-        $repo = $this->em->getRepository(Dossier::class);
-        $conn = $this->em->getConnection();
-
-        // Exclure les archives pour les stats agents
-        $qbBase = $repo->createQueryBuilder('d')
-            ->leftJoin('d.statut', 's')
-            ->where("s.code != 'ARCHIVE'");
-
-        if ($serviceId) {
-            $qbBase->andWhere('d.service = :sid')->setParameter('sid', (int) $serviceId);
-        }
-
-        $total   = (int) (clone $qbBase)->select('COUNT(d.id)')->getQuery()->getSingleScalarResult();
-
-        $statuts           = $this->em->getRepository(StatutDossier::class)->findAll();
-        $dossiersParStatut = [];
-        foreach ($statuts as $s) {
-            if ($s->getCode() === 'ARCHIVE') continue;
-            $cnt = (int) (clone $qbBase)->select('COUNT(d.id)')
-                ->andWhere('d.statut = :st')->setParameter('st', $s)
-                ->getQuery()->getSingleScalarResult();
-            $dossiersParStatut[] = ['statut' => $s->getLibelle(), 'code' => $s->getCode(), 'count' => $cnt];
-        }
-
-        $sqlService = "SELECT sv.nom AS service, COUNT(d.id) AS count FROM dossiers d
-                       JOIN services sv ON d.service_id = sv.id
-                       JOIN statuts_dossier sd ON d.statut_id = sd.id
-                       WHERE sd.code != 'ARCHIVE' GROUP BY sv.nom ORDER BY count DESC";
-        $parService = [];
-        try { $parService = $conn->executeQuery($sqlService)->fetchAllAssociative(); } catch (\Exception $e) {}
-
-        $sqlEvol = "SELECT DATE_FORMAT(date_depot, '%Y-%m') AS mois, COUNT(*) AS recu,
-                           SUM(CASE WHEN s.code IN ('TERMINE','ARCHIVE') THEN 1 ELSE 0 END) AS traite,
-                           SUM(CASE WHEN s.code = 'REJETE' THEN 1 ELSE 0 END) AS rejete
-                    FROM dossiers d JOIN statuts_dossier s ON d.statut_id = s.id
-                    WHERE d.date_depot >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
-                    GROUP BY mois ORDER BY mois";
-        $evolution = [];
-        try { $evolution = $conn->executeQuery($sqlEvol)->fetchAllAssociative(); } catch (\Exception $e) {}
-
-        $termine = (int) (clone $qbBase)->select('COUNT(d.id)')
-            ->andWhere('d.dateMiseAJourStatut >= :d')->andWhere("s.code = 'TERMINE'")
-            ->setParameter('d', $debut)->getQuery()->getSingleScalarResult();
-
-        $rejete = (int) (clone $qbBase)->select('COUNT(d.id)')
-            ->andWhere('d.dateMiseAJourStatut >= :d')->andWhere("s.code = 'REJETE'")
-            ->setParameter('d', $debut)->getQuery()->getSingleScalarResult();
-
-        $tTrait = $total > 0 ? round(($termine / $total) * 100, 1) : 0;
-        $tRejet = $total > 0 ? round(($rejete  / $total) * 100, 1) : 0;
-
-        return $this->json([
-            'totalDossiers'          => $total,
-            'tauxTraitement'         => $tTrait,
-            'delaiMoyen'             => 3,
-            'tauxRejet'              => $tRejet,
-            'tendanceTotalDossiers'  => 0,
-            'tendanceTauxTraitement' => 0,
-            'tendanceDelaiMoyen'     => 0,
-            'tendanceTauxRejet'      => 0,
-            'dossiersParStatut'      => $dossiersParStatut,
-            'repartitionParService'  => $parService,
-            'delaiParMois'           => [],
-            'evolutionMensuelle'     => $evolution,
-        ]);
-    }
-
+    
     // ── GET /api/statistiques/archiviste ──────────────────────────────────
     #[Route('/archiviste', name: 'archiviste', methods: ['GET'])]
     public function statsArchiviste(Request $request): JsonResponse
@@ -416,5 +338,111 @@ class StatistiqueController extends AbstractController
 </body>
 </html>
 HTML;
+    }
+
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH : remplacer la méthode statsDossiers() dans StatistiqueController.php
+// Remplacez la méthode complète (de #[Route('/dossiers'...)] jusqu'à la fin de })
+// ─────────────────────────────────────────────────────────────────────────────
+
+    #[Route('/dossiers', name: 'dossiers', methods: ['GET'])]
+    public function statsDossiers(Request $request): JsonResponse
+    {
+        $periode   = $request->query->get('periode', '30j');
+        $serviceId = $request->query->get('serviceId');
+        [$debut, $fin] = $this->calculerPlage(
+            $periode,
+            $request->query->get('dateDebut'),
+            $request->query->get('dateFin')
+        );
+
+        $repo = $this->em->getRepository(Dossier::class);
+        $conn = $this->em->getConnection();
+
+        // ── Récupérer tous les statuts ─────────────────────────────────────
+        $tousStatuts  = $this->em->getRepository(StatutDossier::class)->findAll();
+        $statutByCode = [];
+        foreach ($tousStatuts as $s) {
+            $statutByCode[$s->getCode()] = $s;
+        }
+
+        // ── Count par statut avec count() (pas de DQL JOIN) ────────────────
+        $dossiersParStatut = [];
+        $total = 0;
+        foreach ($tousStatuts as $s) {
+            if ($s->getCode() === 'ARCHIVE') continue;
+            $cnt = $repo->count(['statut' => $s]);
+            $dossiersParStatut[] = ['statut' => $s->getLibelle(), 'code' => $s->getCode(), 'count' => $cnt];
+            $total += $cnt;
+        }
+
+        // ── Termine / Rejeté sur la période via SQL brut ───────────────────
+        $debutStr  = $debut->format('Y-m-d H:i:s');
+        $serviceClause = $serviceId ? "AND d.service_id = " . (int)$serviceId : '';
+        $termine = 0;
+        $rejete  = 0;
+        try {
+            $termine = (int) $conn->executeQuery(
+                "SELECT COUNT(d.id) FROM dossiers d
+                 JOIN statuts_dossier s ON d.statut_id = s.id
+                 WHERE s.code = 'TERMINE'
+                 AND d.date_mise_a_jour_statut >= ? $serviceClause",
+                [$debutStr]
+            )->fetchOne();
+
+            $rejete = (int) $conn->executeQuery(
+                "SELECT COUNT(d.id) FROM dossiers d
+                 JOIN statuts_dossier s ON d.statut_id = s.id
+                 WHERE s.code = 'REJETE'
+                 AND d.date_mise_a_jour_statut >= ? $serviceClause",
+                [$debutStr]
+            )->fetchOne();
+        } catch (\Exception $e) {}
+
+        $tTrait = $total > 0 ? round(($termine / $total) * 100, 1) : 0;
+        $tRejet = $total > 0 ? round(($rejete  / $total) * 100, 1) : 0;
+
+        // ── Répartition par service via SQL brut ───────────────────────────
+        $parService = [];
+        try {
+            $sql = "SELECT sv.nom AS service, COUNT(d.id) AS count
+                    FROM dossiers d
+                    JOIN services sv ON d.service_id = sv.id
+                    JOIN statuts_dossier sd ON d.statut_id = sd.id
+                    WHERE sd.code != 'ARCHIVE'
+                    GROUP BY sv.nom ORDER BY count DESC";
+            $parService = $conn->executeQuery($sql)->fetchAllAssociative();
+        } catch (\Exception $e) {}
+
+        // ── Évolution mensuelle (12 derniers mois) ─────────────────────────
+        $evolution = [];
+        try {
+            $sqlEvol = "SELECT DATE_FORMAT(date_depot, '%Y-%m') AS mois,
+                               COUNT(*) AS recu,
+                               SUM(CASE WHEN s.code IN ('TERMINE','ARCHIVE') THEN 1 ELSE 0 END) AS traite,
+                               SUM(CASE WHEN s.code = 'REJETE' THEN 1 ELSE 0 END) AS rejete
+                        FROM dossiers d
+                        JOIN statuts_dossier s ON d.statut_id = s.id
+                        WHERE d.date_depot >= DATE_SUB(NOW(), INTERVAL 12 MONTH)
+                        GROUP BY mois ORDER BY mois";
+            $evolution = $conn->executeQuery($sqlEvol)->fetchAllAssociative();
+        } catch (\Exception $e) {}
+
+        return $this->json([
+            'totalDossiers'          => $total,
+            'tauxTraitement'         => $tTrait,
+            'delaiMoyen'             => 3,
+            'tauxRejet'              => $tRejet,
+            'tendanceTotalDossiers'  => 0,
+            'tendanceTauxTraitement' => 0,
+            'tendanceDelaiMoyen'     => 0,
+            'tendanceTauxRejet'      => 0,
+            'dossiersParStatut'      => $dossiersParStatut,
+            'repartitionParService'  => $parService,
+            'delaiParMois'           => [],
+            'evolutionMensuelle'     => $evolution,
+        ]);
     }
 }

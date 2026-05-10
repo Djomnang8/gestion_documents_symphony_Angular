@@ -72,7 +72,13 @@ class DossierController extends AbstractController
         $this->em->flush();
     }
 
-    // ── LISTE (filtrée par service de l'agent) ─────────────────────────────
+       
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH DossierController — remplacer les 3 méthodes suivantes
+// (list, stats, archives) qui utilisent des DQL LEFT JOIN
+// ─────────────────────────────────────────────────────────────────────────────
+
+    // ── GET /api/dossiers ─────────────────────────────────────────────────
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
@@ -84,130 +90,239 @@ class DossierController extends AbstractController
         $dateDebut = $request->query->get('dateDebut');
         $dateFin   = $request->query->get('dateFin');
 
-        $qb = $this->em->getRepository(Dossier::class)->createQueryBuilder('d')
-            ->leftJoin('d.statut', 's')->addSelect('s')
-            ->leftJoin('d.service', 'sv')->addSelect('sv')
-            ->leftJoin('d.agent', 'a')->addSelect('a');
-
-        // Exclure les archives de la liste agent
-        $qb->andWhere("s.code != 'ARCHIVE'");
-
-        // Agents voient uniquement les dossiers de leur service
         $user = $this->security->getUser();
-        if ($user instanceof Utilisateur && $user->getRoleNom() === 'Agent') {
-            if ($user->getService()) {
-                $qb->andWhere('d.service = :service')
-                   ->setParameter('service', $user->getService());
-            }
+        $conn = $this->em->getConnection();
+
+        // ── Construire les clauses WHERE ───────────────────────────────────
+        $where  = ["sd.code != 'ARCHIVE'"];
+        $params = [];
+
+        // Filtre agent : uniquement son service
+        if ($user instanceof Utilisateur
+            && $user->getRoleNom() === 'Agent'
+            && $user->getService()
+        ) {
+            $where[]  = 'd.service_id = ?';
+            $params[] = $user->getService()->getId();
         } elseif ($serviceId) {
-            $qb->andWhere('d.service = :service')
-               ->setParameter('service', (int) $serviceId);
+            $where[]  = 'd.service_id = ?';
+            $params[] = (int) $serviceId;
         }
 
         if ($statut) {
-            $qb->andWhere('s.code = :statut')->setParameter('statut', $statut);
+            $where[]  = 'sd.code = ?';
+            $params[] = $statut;
         }
         if ($recherche) {
-            $qb->andWhere('d.numero LIKE :r OR d.nomCitoyen LIKE :r OR d.titre LIKE :r')
-               ->setParameter('r', "%$recherche%");
+            $where[]  = '(d.numero LIKE ? OR d.nom_citoyen LIKE ? OR d.titre LIKE ?)';
+            $like = '%' . $recherche . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
         }
         if ($dateDebut) {
-            $qb->andWhere('d.dateDepot >= :dd')
-               ->setParameter('dd', new \DateTimeImmutable($dateDebut));
+            $where[]  = 'd.date_depot >= ?';
+            $params[] = $dateDebut;
         }
         if ($dateFin) {
-            $qb->andWhere('d.dateDepot <= :df')
-               ->setParameter('df', new \DateTimeImmutable($dateFin . ' 23:59:59'));
+            $where[]  = 'd.date_depot <= ?';
+            $params[] = $dateFin . ' 23:59:59';
         }
 
-        $qb->orderBy('d.dateDepot', 'DESC');
+        $whereStr = 'WHERE ' . implode(' AND ', $where);
 
-        $total    = (int) (clone $qb)->select('COUNT(d.id)')->getQuery()->getSingleScalarResult();
-        $dossiers = $qb->setFirstResult(($page - 1) * $taille)
-                       ->setMaxResults($taille)
-                       ->getQuery()->getResult();
+        // ── Total ──────────────────────────────────────────────────────────
+        $total = 0;
+        try {
+            $total = (int) $conn->executeQuery(
+                "SELECT COUNT(d.id) FROM dossiers d
+                 LEFT JOIN statuts_dossier sd ON d.statut_id = sd.id
+                 $whereStr",
+                $params
+            )->fetchOne();
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
 
-        return $this->json([
-            'total'    => $total,
-            'page'     => $page,
-            'taille'   => $taille,
-            'dossiers' => array_map([$this, 'serializeListe'], $dossiers),
-        ]);
+        // ── Liste paginée ──────────────────────────────────────────────────
+        $listParams   = array_merge($params, [$taille, ($page - 1) * $taille]);
+        $dossiers     = [];
+        try {
+            $rows = $conn->executeQuery(
+                "SELECT d.id, d.numero, d.titre, d.nom_citoyen, d.email_citoyen,
+                        d.telephone_citoyen, d.date_depot, d.date_mise_a_jour_statut,
+                        d.motif_rejet,
+                        sd.code AS statut_code, sd.libelle AS statut_libelle,
+                        sv.nom AS service_nom
+                 FROM dossiers d
+                 LEFT JOIN statuts_dossier sd ON d.statut_id = sd.id
+                 LEFT JOIN services sv ON d.service_id = sv.id
+                 $whereStr
+                 ORDER BY d.date_depot DESC
+                 LIMIT ? OFFSET ?",
+                $listParams
+            )->fetchAllAssociative();
+
+            $dossiers = array_map(fn($r) => [
+                'id'                  => $r['id'],
+                'numero'              => $r['numero'],
+                'titre'               => $r['titre'],
+                'nomCitoyen'          => $r['nom_citoyen'],
+                'emailCitoyen'        => $r['email_citoyen'],
+                'telephoneCitoyen'    => $r['telephone_citoyen'],
+                'statutCode'          => $r['statut_code'],
+                'statutLibelle'       => $r['statut_libelle'],
+                'serviceNom'          => $r['service_nom'],
+                'dateDepot'           => $r['date_depot'],
+                'dateMiseAJourStatut' => $r['date_mise_a_jour_statut'],
+            ], $rows);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+
+        return $this->json(['total' => $total, 'page' => $page, 'taille' => $taille, 'dossiers' => $dossiers]);
     }
 
-    // ── STATISTIQUES AGENT ─────────────────────────────────────────────────
+    // ── GET /api/dossiers/stats ───────────────────────────────────────────
     #[Route('/stats', name: 'stats', methods: ['GET'])]
     public function stats(): JsonResponse
     {
-        $repo = $this->em->getRepository(Dossier::class);
         $user = $this->security->getUser();
+        $conn = $this->em->getConnection();
+        $repo = $this->em->getRepository(Dossier::class);
 
-        $serviceFilter = null;
-        if ($user instanceof Utilisateur && $user->getRoleNom() === 'Agent' && $user->getService()) {
-            $serviceFilter = $user->getService();
+        $serviceClause = '';
+        if ($user instanceof Utilisateur
+            && $user->getRoleNom() === 'Agent'
+            && $user->getService()
+        ) {
+            $serviceClause = 'AND d.service_id = ' . (int) $user->getService()->getId();
         }
 
-        $addFilter = function ($qb) use ($serviceFilter) {
-            if ($serviceFilter) {
-                $qb->andWhere('d.service = :service')->setParameter('service', $serviceFilter);
+        // Count par statut via count() criteria (SANS DQL JOIN)
+        $tousStatuts  = $this->em->getRepository(StatutDossier::class)->findAll();
+        $parStatut    = [];
+        $total        = 0;
+        foreach ($tousStatuts as $s) {
+            $cnt = $repo->count(['statut' => $s]);
+            $parStatut[$s->getCode()] = $cnt;
+            if ($s->getCode() !== 'ARCHIVE') {
+                $total += $cnt;
             }
-            return $qb;
-        };
-
-        $aujourd    = new \DateTimeImmutable('today');
-        $debutSem   = new \DateTimeImmutable('-7 days');
-        $seuilRetard = new \DateTimeImmutable('-7 days');
-
-        $qbAuj = $addFilter($repo->createQueryBuilder('d')->select('COUNT(d.id)'));
-        $recusAujourdhui = (int) $qbAuj
-            ->andWhere('d.dateDepot >= :debut')->setParameter('debut', $aujourd)
-            ->getQuery()->getSingleScalarResult();
-
-        $statutEC = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => 'EN_COURS']);
-        $qbEC = $addFilter($repo->createQueryBuilder('d')->select('COUNT(d.id)'));
-        $enCours = $statutEC ? (int) $qbEC
-            ->andWhere('d.statut = :s')->setParameter('s', $statutEC)
-            ->getQuery()->getSingleScalarResult() : 0;
-
-        $qbTraites = $addFilter($repo->createQueryBuilder('d')->select('COUNT(d.id)')->leftJoin('d.statut', 's'));
-        $traitesSemine = (int) $qbTraites
-            ->andWhere('d.dateMiseAJourStatut >= :debut')
-            ->andWhere("s.code IN ('TERMINE', 'ARCHIVE', 'REJETE')")
-            ->setParameter('debut', $debutSem)
-            ->getQuery()->getSingleScalarResult();
-
-        $qbRetard = $addFilter($repo->createQueryBuilder('d')->select('COUNT(d.id)')->leftJoin('d.statut', 'sr'));
-        $enRetard = (int) $qbRetard
-            ->andWhere('d.dateMiseAJourStatut <= :seuil')
-            ->andWhere("sr.code IN ('RECU', 'EN_COURS')")
-            ->setParameter('seuil', $seuilRetard)
-            ->getQuery()->getSingleScalarResult();
-
-        $statuts   = $this->em->getRepository(StatutDossier::class)->findAll();
-        $parStatut = [];
-        foreach ($statuts as $s) {
-            $qbStat = $addFilter($repo->createQueryBuilder('d')->select('COUNT(d.id)'));
-            $parStatut[$s->getCode()] = (int) $qbStat
-                ->andWhere('d.statut = :st')->setParameter('st', $s)
-                ->getQuery()->getSingleScalarResult();
         }
 
-        $qbTotal = $addFilter($repo->createQueryBuilder('d')->select('COUNT(d.id)'));
-        $total   = (int) $qbTotal->getQuery()->getSingleScalarResult();
+        // Requêtes temporelles via SQL brut
+        $aujourd = date('Y-m-d');
+        $debutSem = date('Y-m-d', strtotime('-7 days'));
+        $seuil    = date('Y-m-d', strtotime('-7 days'));
+
+        $recusAujourdhui = 0;
+        $traitesSemine   = 0;
+        $enRetard        = 0;
+        try {
+            $recusAujourdhui = (int) $conn->executeQuery(
+                "SELECT COUNT(d.id) FROM dossiers d WHERE d.date_depot >= ? $serviceClause",
+                [$aujourd]
+            )->fetchOne();
+
+            $traitesSemine = (int) $conn->executeQuery(
+                "SELECT COUNT(d.id) FROM dossiers d
+                 JOIN statuts_dossier s ON d.statut_id = s.id
+                 WHERE d.date_mise_a_jour_statut >= ?
+                 AND s.code IN ('TERMINE','ARCHIVE','REJETE') $serviceClause",
+                [$debutSem]
+            )->fetchOne();
+
+            $enRetard = (int) $conn->executeQuery(
+                "SELECT COUNT(d.id) FROM dossiers d
+                 JOIN statuts_dossier s ON d.statut_id = s.id
+                 WHERE d.date_mise_a_jour_statut <= ?
+                 AND s.code IN ('RECU','EN_COURS') $serviceClause",
+                [$seuil]
+            )->fetchOne();
+        } catch (\Exception $e) {}
 
         return $this->json([
             'total'           => $total,
             'recusAujourdhui' => $recusAujourdhui,
-            'enCours'         => $enCours,
+            'enCours'         => $parStatut['EN_COURS']  ?? 0,
             'traitesSemine'   => $traitesSemine,
             'enRetard'        => $enRetard,
-            'recu'            => $parStatut['RECU']     ?? 0,
+            'recu'            => $parStatut['RECU']      ?? 0,
             'transfere'       => $parStatut['TRANSFERE'] ?? 0,
-            'rejete'          => $parStatut['REJETE']   ?? 0,
-            'termine'         => $parStatut['TERMINE']  ?? 0,
-            'archive'         => $parStatut['ARCHIVE']  ?? 0,
+            'rejete'          => $parStatut['REJETE']    ?? 0,
+            'termine'         => $parStatut['TERMINE']   ?? 0,
+            'archive'         => $parStatut['ARCHIVE']   ?? 0,
             'parStatut'       => $parStatut,
         ]);
+    }
+
+    // ── GET /api/dossiers/archives ────────────────────────────────────────
+    #[Route('/archives', name: 'archives', methods: ['GET'])]
+    public function archives(Request $request): JsonResponse
+    {
+        $page   = max(1, (int) $request->query->get('page', 1));
+        $size   = min(200, (int) $request->query->get('size', 12));
+        $search = $request->query->get('search', '');
+        $conn   = $this->em->getConnection();
+
+        $where  = ["sd.code = 'ARCHIVE'"];
+        $params = [];
+        if ($search) {
+            $where[]  = '(d.numero LIKE ? OR d.nom_citoyen LIKE ? OR d.titre LIKE ?)';
+            $like = '%' . $search . '%';
+            $params[] = $like;
+            $params[] = $like;
+            $params[] = $like;
+        }
+        $whereStr = 'WHERE ' . implode(' AND ', $where);
+
+        $total = 0;
+        $data  = [];
+        try {
+            $total = (int) $conn->executeQuery(
+                "SELECT COUNT(d.id) FROM dossiers d
+                 LEFT JOIN statuts_dossier sd ON d.statut_id = sd.id
+                 $whereStr",
+                $params
+            )->fetchOne();
+
+            $listParams = array_merge($params, [$size, ($page - 1) * $size]);
+            $rows = $conn->executeQuery(
+                "SELECT d.id, d.numero, d.titre, d.nom_citoyen, d.email_citoyen,
+                        d.date_depot, d.date_archivage, d.date_mise_a_jour_statut,
+                        sd.code AS statut_code, sd.libelle AS statut_libelle,
+                        sv.nom AS service_nom,
+                        CONCAT(u.prenom, ' ', u.nom) AS agent_nom
+                 FROM dossiers d
+                 LEFT JOIN statuts_dossier sd ON d.statut_id = sd.id
+                 LEFT JOIN services sv ON d.service_id = sv.id
+                 LEFT JOIN utilisateurs u ON d.agent_id = u.id
+                 $whereStr
+                 ORDER BY d.date_archivage DESC
+                 LIMIT ? OFFSET ?",
+                $listParams
+            )->fetchAllAssociative();
+
+            $data = array_map(fn($r) => [
+                'id'                  => $r['id'],
+                'numero'              => $r['numero'],
+                'titre'               => $r['titre'],
+                'nomCitoyen'          => $r['nom_citoyen'],
+                'emailCitoyen'        => $r['email_citoyen'],
+                'statutCode'          => $r['statut_code'],
+                'statutLibelle'       => $r['statut_libelle'],
+                'serviceNom'          => $r['service_nom'],
+                'agentNom'            => $r['agent_nom'],
+                'dateDepot'           => $r['date_depot'],
+                'dateArchivage'       => $r['date_archivage'],
+                'dateMiseAJourStatut' => $r['date_mise_a_jour_statut'],
+            ], $rows);
+        } catch (\Exception $e) {
+            return $this->json(['error' => $e->getMessage()], 500);
+        }
+
+        return $this->json(['total' => $total, 'page' => $page, 'size' => $size, 'data' => $data]);
     }
 
     // ── EN RETARD ──────────────────────────────────────────────────────────
@@ -286,57 +401,6 @@ class DossierController extends AbstractController
         return $response;
     }
 
-    // ── ARCHIVES ───────────────────────────────────────────────────────────
-    #[Route('/archives', name: 'archives', methods: ['GET'])]
-    public function archives(Request $request): JsonResponse
-    {
-        $statutArchive = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => 'ARCHIVE']);
-        if (!$statutArchive) {
-            return $this->json(['total' => 0, 'page' => 1, 'size' => 12, 'data' => []]);
-        }
-
-        $page      = max(1, (int) $request->query->get('page', 1));
-        $size      = min(100, (int) $request->query->get('size', 12));
-        $numero    = $request->query->get('numero');
-        $dateDebut = $request->query->get('dateDebut');
-        $dateFin   = $request->query->get('dateFin');
-
-        $qb = $this->em->getRepository(Dossier::class)->createQueryBuilder('d')
-            ->leftJoin('d.service', 'sv')->addSelect('sv')
-            ->where('d.statut = :s')->setParameter('s', $statutArchive);
-
-        if ($numero) {
-            $qb->andWhere('d.numero LIKE :n OR d.nomCitoyen LIKE :n')->setParameter('n', "%$numero%");
-        }
-        if ($dateDebut) {
-            $qb->andWhere('d.dateArchivage >= :dd')->setParameter('dd', new \DateTimeImmutable($dateDebut));
-        }
-        if ($dateFin) {
-            $qb->andWhere('d.dateArchivage <= :df')->setParameter('df', new \DateTimeImmutable($dateFin . ' 23:59:59'));
-        }
-
-        $total    = (int) (clone $qb)->select('COUNT(d.id)')->getQuery()->getSingleScalarResult();
-        $dossiers = $qb->orderBy('d.dateArchivage', 'DESC')
-            ->setFirstResult(($page - 1) * $size)->setMaxResults($size)
-            ->getQuery()->getResult();
-
-        return $this->json([
-            'total' => $total,
-            'page'  => $page,
-            'size'  => $size,
-            'data'  => array_map(fn($d) => [
-                'id'            => $d->getId(),
-                'numero'        => $d->getNumero(),
-                'titre'         => $d->getTitre(),
-                'citoyen'       => $d->getNomCitoyen(),
-                'emailCitoyen'  => $d->getEmailCitoyen() ?? '',
-                'service'       => $d->getService()->getNom(),
-                'dateArchivage' => $d->getDateArchivage()?->format('c') ?? $d->getDateMiseAJourStatut()->format('c'),
-                'nbDocuments'   => $d->getVersionsDocument()->count(),
-                'miniature'     => null,
-            ], $dossiers),
-        ]);
-    }
 
     // ── SUIVI CITOYEN (public) ─────────────────────────────────────────────
     // Route identique à C# : GET /api/dossiers/suivi/{numero}

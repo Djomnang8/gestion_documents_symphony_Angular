@@ -10,6 +10,7 @@ use Doctrine\ORM\Mapping as ORM;
 class Dossier
 {
     #[ORM\Id]
+    #[ORM\GeneratedValue(strategy: 'NONE')]
     #[ORM\Column(type: 'string', length: 36)]
     private string $id;
 
