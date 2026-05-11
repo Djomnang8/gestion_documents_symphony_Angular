@@ -38,7 +38,7 @@ class Dossier
     #[ORM\Column]
     private \DateTimeImmutable $dateDepot;
 
-    #[ORM\Column]
+    #[ORM\Column(name: 'date_mise_a_jour_statut')]
     private \DateTimeImmutable $dateMiseAJourStatut;
 
     #[ORM\Column(nullable: true)]
