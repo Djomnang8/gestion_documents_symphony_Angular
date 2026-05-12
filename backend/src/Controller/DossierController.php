@@ -861,13 +861,17 @@ $uploadDir = $this->getParameter('kernel.project_dir')
 
     // ── HELPERS ────────────────────────────────────────────────────────────
     private function genererNumero(): string
-    {
-        $annee = date('Y');
-        $count = (int) $this->em->getRepository(Dossier::class)
-            ->createQueryBuilder('d')->select('COUNT(d.id)')
-            ->getQuery()->getSingleScalarResult();
-        return sprintf('DOS-%s-%05d', $annee, $count + 1);
-    }
+{
+    $annee = date('Y');
+    $maxSeq = (int) $this->em->getConnection()->executeQuery(
+        "SELECT COALESCE(MAX(CAST(SUBSTRING_INDEX(numero, '-', -1) AS UNSIGNED)), 0)
+           FROM dossiers
+          WHERE numero LIKE :pattern",
+        ['pattern' => "DOS-$annee-%"]
+    )->fetchOne();
+
+    return sprintf('DOS-%s-%05d', $annee, $maxSeq + 1);
+}
 
     private function serializeListe(Dossier $d): array
     {
