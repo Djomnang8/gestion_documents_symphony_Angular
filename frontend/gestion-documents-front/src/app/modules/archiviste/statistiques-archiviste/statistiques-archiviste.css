@@ -57,3 +57,8 @@
   .stats-arch-wrapper { padding:14px 10px 24px; }
   .kpi-grille { grid-template-columns:1fr; }
 }
+.page-header-right { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.btn-export { border:none; border-radius:8px; padding:9px 13px; color:#fff; font-size:12px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px; box-shadow:var(--ombre); transition:all .18s; }
+.btn-export:hover { filter:brightness(.94); transform:translateY(-1px); }
+.btn-export:active { transform:scale(.98); }
+.btn-pdf { background:#E53935; }

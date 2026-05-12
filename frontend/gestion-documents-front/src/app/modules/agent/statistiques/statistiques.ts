@@ -36,7 +36,7 @@ export class StatistiquesComponent implements OnInit, OnDestroy, AfterViewInit {
     { label: 'Personnalisé', value: 'custom' as const }
   ];
 
-  @ViewChildren('canvasBarres,canvasCamembert,canvasCourbe,canvasGauge,canvasAire')
+  @ViewChildren('canvasAire,canvasServices')
   canvases!: QueryList<ElementRef<HTMLCanvasElement>>;
 
   private canvasReady = false;
@@ -80,8 +80,13 @@ export class StatistiquesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // ── Export PDF via HttpClient (le JWT header est envoyé automatiquement par l'interceptor)
   exporterPdf() {
-    const filtre: StatistiquesFiltre = { periode: this.periode, serviceId: this.serviceId };
-    this.svc.exporterPdf(filtre).subscribe({
+    const filtre: StatistiquesFiltre = {
+      periode: this.periode,
+      dateDebut: this.periode === 'custom' ? this.dateDebut : undefined,
+      dateFin: this.periode === 'custom' ? this.dateFin : undefined,
+      serviceId: this.serviceId
+    };
+    this.svc.exporterPdf(filtre, 'documentaire').subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a   = document.createElement('a');
@@ -121,12 +126,9 @@ export class StatistiquesComponent implements OnInit, OnDestroy, AfterViewInit {
   // ── Graphiques Canvas natifs ─────────────────────────────
   private dessinerGraphiques() {
     const s = this.stats(); if (!s) return;
-    const els = this.canvases.toArray(); if (els.length < 5) return;
-    this.dessinerBarres    (els[0].nativeElement, s);
-    this.dessinerCamembert (els[1].nativeElement, s);
-    this.dessinerCourbe    (els[2].nativeElement, s);
-    this.dessinerGauge     (els[3].nativeElement, s);
-    this.dessinerAire      (els[4].nativeElement, s);
+    const els = this.canvases.toArray(); if (els.length < 2) return;
+    this.dessinerAire(els[0].nativeElement, s);
+    this.dessinerServices(els[1].nativeElement, s);
   }
 
   private dessinerBarres(canvas: HTMLCanvasElement, s: StatsDossiers) {
@@ -280,6 +282,39 @@ export class StatistiquesComponent implements OnInit, OnDestroy, AfterViewInit {
       const lx = W-pad.r+10, ly = 40+i*28;
       ctx.fillStyle=s.col; ctx.fillRect(lx,ly-7,14,14);
       ctx.fillStyle='#424242'; ctx.font='11px sans-serif'; ctx.textAlign='left'; ctx.fillText(s.label, lx+18, ly+4);
+    });
+  }
+
+
+  private dessinerServices(canvas: HTMLCanvasElement, s: StatsDossiers) {
+    const ctx = canvas.getContext('2d')!;
+    canvas.width = canvas.parentElement!.clientWidth; canvas.height = 220;
+    const W = canvas.width, H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const data = s.repartitionParService.slice(0,6); if (!data.length) return;
+    const cols = ['#00897B','#1565C0','#5E35B1','#FFB300','#E53935','#546E7A'];
+    const pad = { l:36, r:20, t:24, b:38 };
+    const maxV = Math.max(...data.map(d => d.count), 1);
+    const bW = Math.min(54, (W-pad.l-pad.r)/data.length - 10);
+
+    for (let i=0; i<=4; i++) {
+      const y = pad.t + ((H-pad.t-pad.b)/4)*i;
+      ctx.strokeStyle = '#E0E0E0'; ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(W-pad.r,y); ctx.stroke();
+      ctx.fillStyle = '#9E9E9E'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText(String(Math.round(maxV-(maxV/4)*i)), pad.l-5, y+4);
+    }
+
+    data.forEach((d,i) => {
+      const x = pad.l + i*(W-pad.l-pad.r)/data.length + ((W-pad.l-pad.r)/data.length-bW)/2;
+      const bH = ((H-pad.t-pad.b)/maxV)*d.count;
+      const y = H-pad.b-bH;
+      ctx.fillStyle = cols[i%cols.length];
+      ctx.beginPath(); ctx.roundRect(x,y,bW,bH,4); ctx.fill();
+      ctx.fillStyle = '#424242'; ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(String(d.count), x+bW/2, y-5);
+      ctx.fillStyle = '#757575'; ctx.font = '9px sans-serif';
+      const label = d.service.length > 11 ? d.service.substring(0,11)+'…' : d.service;
+      ctx.fillText(label, x+bW/2, H-pad.b+14);
     });
   }
 
