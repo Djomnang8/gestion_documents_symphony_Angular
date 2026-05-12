@@ -696,7 +696,7 @@ public function publicDepot(Request $request): JsonResponse
     $serviceId = $request->request->get('serviceId');
     $service = $this->em->getRepository(Service::class)->find($serviceId);
     if (!$service) {
-        return $this->json(['message' => "Service invalide."], 400);
+        return $this->json(['message' => 'Service invalide.'], 400);
     }
 
     $statut = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => 'RECU']);
@@ -704,7 +704,7 @@ public function publicDepot(Request $request): JsonResponse
         return $this->json(['message' => 'Statut initial introuvable.'], 500);
     }
 
-    // Création du dossier unique
+    // 1. Création du dossier unique
     $dossier = new Dossier();
     $dossier->setTitre($request->request->get('titre', ''))
             ->setDescription($request->request->get('description'))
@@ -716,17 +716,15 @@ public function publicDepot(Request $request): JsonResponse
             ->setNumero($this->genererNumero());
 
     $this->em->persist($dossier);
-    $this->em->flush();
-    $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
 
-    // Traitement des fichiers
+    // 2. Traitement des fichiers
     $fichiers = $request->files->get('fichiers') ?? [];
     if (!is_array($fichiers)) {
         $fichiers = array_filter([$fichiers]);
     }
 
     $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-    $maxSize = 10 * 1024 * 1024; // 10 Mo
+    $maxSize = 10 * 1024 * 1024;
     $maxFiles = 4;
 
     if (count($fichiers) === 0) {
@@ -736,11 +734,15 @@ public function publicDepot(Request $request): JsonResponse
         return $this->json(['message' => "Maximum $maxFiles fichiers autorisés."], 400);
     }
 
-    // Répertoire de stockage (commun pour ce citoyen)
+    // Répertoire de stockage
     $citoyenEmail = $request->request->get('emailCitoyen');
     $citoyenNom   = $request->request->get('nomCitoyen', 'Inconnu');
-    $dossierDir = $citoyenEmail ? $this->getCitizenFolder($citoyenNom, $citoyenEmail) : $dossier->getId();
-    $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/citoyens/' . $dossierDir;
+    $dossierDir = $citoyenEmail ? $this->getCitizenFolder($citoyenNom, $citoyenEmail) : uniqid('citoyen_', true);
+    $projectDir = $this->getParameter('kernel.project_dir');
+    if (!$projectDir) {
+        return $this->json(['message' => 'Erreur de configuration du répertoire.'], 500);
+    }
+    $uploadDir = $projectDir . '/public/uploads/citoyens/' . $dossierDir;
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0775, true);
     }
@@ -775,9 +777,11 @@ public function publicDepot(Request $request): JsonResponse
         $this->em->persist($version);
         $numVersion++;
     }
-    $this->em->flush();
 
-    // Email au citoyen
+    $this->em->flush();
+    $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
+
+    // Email de confirmation
     if ($citoyenEmail) {
         try {
             $this->emailService->envoyerConfirmationDepot(
