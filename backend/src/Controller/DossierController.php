@@ -30,10 +30,11 @@ class DossierController extends AbstractController
     ) {}
 
     private function slugifyEmail(string $email): string
-    {
-        return str_replace(['@', '.'], ['_', '_'], $email);
-    }
+{
+    return str_replace(['@', '.'], ['_', '_'], $email);
+}
 
+    // ── HELPER : notification aux agents du service ────────────────────────
     private function notifierAgentsService(Dossier $dossier, string $titre, string $message, string $type): void
     {
         $agents = $this->em->getRepository(Utilisateur::class)
@@ -58,10 +59,11 @@ class DossierController extends AbstractController
         $this->em->flush();
     }
 
+    // ── HELPER : journaliser une action ────────────────────────────────────
     private function journaliser(string $module, string $action, string $details): void
     {
         $user = $this->security->getUser();
-        $j = new Journal();
+        $j    = new Journal();
         $j->setModule($module)->setAction($action)->setDetails($details)->setNiveauId(1);
         if ($user instanceof Utilisateur) {
             $j->setUtilisateur($user);
@@ -70,6 +72,10 @@ class DossierController extends AbstractController
         $this->em->flush();
     }
 
+
+
+
+    // ── GET /api/dossiers/stats ───────────────────────────────────────────
     #[Route('/stats', name: 'stats', methods: ['GET'])]
     public function stats(): JsonResponse
     {
@@ -85,9 +91,10 @@ class DossierController extends AbstractController
             $serviceClause = 'AND d.service_id = ' . (int) $user->getService()->getId();
         }
 
-        $tousStatuts = $this->em->getRepository(StatutDossier::class)->findAll();
-        $parStatut = [];
-        $total = 0;
+        // Count par statut via count() criteria (SANS DQL JOIN)
+        $tousStatuts  = $this->em->getRepository(StatutDossier::class)->findAll();
+        $parStatut    = [];
+        $total        = 0;
         foreach ($tousStatuts as $s) {
             $cnt = $repo->count(['statut' => $s]);
             $parStatut[$s->getCode()] = $cnt;
@@ -96,13 +103,14 @@ class DossierController extends AbstractController
             }
         }
 
+        // Requêtes temporelles via SQL brut
         $aujourd = date('Y-m-d');
         $debutSem = date('Y-m-d', strtotime('-7 days'));
-        $seuil = date('Y-m-d', strtotime('-7 days'));
+        $seuil    = date('Y-m-d', strtotime('-7 days'));
 
         $recusAujourdhui = 0;
-        $traitesSemine = 0;
-        $enRetard = 0;
+        $traitesSemine   = 0;
+        $enRetard        = 0;
         try {
             $recusAujourdhui = (int) $conn->executeQuery(
                 "SELECT COUNT(d.id) FROM dossiers d WHERE d.date_depot >= ? $serviceClause",
@@ -141,6 +149,11 @@ class DossierController extends AbstractController
         ]);
     }
 
+    // ═══════════════════════════════════════════════════════════════════════════
+// PATCH 1 — DossierController::list()
+// Remplacer la méthode list() COMPLÈTE dans DossierController.php
+// ═══════════════════════════════════════════════════════════════════════════
+
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(Request $request): JsonResponse
     {
@@ -155,12 +168,14 @@ class DossierController extends AbstractController
         $user = $this->security->getUser();
         $conn = $this->em->getConnection();
 
+        // ── Construire les clauses WHERE avec DBAL QueryBuilder ────────────
         $qb = $conn->createQueryBuilder()
             ->from('dossiers', 'd')
             ->leftJoin('d', 'statuts_dossier', 'sd', 'd.statut_id = sd.id')
             ->leftJoin('d', 'services', 'sv', 'd.service_id = sv.id')
             ->where("sd.code != 'ARCHIVE'");
 
+        // Filtre agent : uniquement son service
         if ($user instanceof Utilisateur
             && $user->getRoleNom() === 'Agent'
             && $user->getService()
@@ -189,6 +204,7 @@ class DossierController extends AbstractController
                ->setParameter('fin', $dateFin . ' 23:59:59');
         }
 
+        // ── Count total ────────────────────────────────────────────────────
         $total = 0;
         try {
             $total = (int) (clone $qb)->select('COUNT(d.id)')->executeQuery()->fetchOne();
@@ -196,6 +212,7 @@ class DossierController extends AbstractController
             return $this->json(['error' => 'count: ' . $e->getMessage()], 500);
         }
 
+        // ── Liste paginée ──────────────────────────────────────────────────
         $dossiers = [];
         try {
             $rows = $qb
@@ -235,6 +252,12 @@ class DossierController extends AbstractController
         ]);
     }
 
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PATCH 2 — DossierController::archives()
+// Remplacer la méthode archives() dans DossierController.php
+// ═══════════════════════════════════════════════════════════════════════════
+
     #[Route('/archives', name: 'archives', methods: ['GET'])]
     public function archives(Request $request): JsonResponse
     {
@@ -246,8 +269,8 @@ class DossierController extends AbstractController
         $qb = $conn->createQueryBuilder()
             ->from('dossiers', 'd')
             ->leftJoin('d', 'statuts_dossier', 'sd', 'd.statut_id = sd.id')
-            ->leftJoin('d', 'services', 'sv', 'd.service_id = sv.id')
-            ->leftJoin('d', 'utilisateurs', 'u', 'd.agent_id = u.id')
+            ->leftJoin('d', 'services',         'sv', 'd.service_id = sv.id')
+            ->leftJoin('d', 'utilisateurs',     'u',  'd.agent_id = u.id')
             ->where("sd.code = 'ARCHIVE'");
 
         if ($search) {
@@ -256,7 +279,7 @@ class DossierController extends AbstractController
         }
 
         $total = 0;
-        $data = [];
+        $data  = [];
         try {
             $total = (int) (clone $qb)->select('COUNT(d.id)')->executeQuery()->fetchOne();
 
@@ -278,9 +301,9 @@ class DossierController extends AbstractController
                 'id'            => $r['id'],
                 'numero'        => $r['numero'],
                 'titre'         => $r['titre'],
-                'citoyen'       => $r['nom_citoyen'],
+                'citoyen'       => $r['nom_citoyen'],      // ← nom attendu par le frontend
                 'emailCitoyen'  => $r['email_citoyen'],
-                'service'       => $r['service_nom'],
+                'service'       => $r['service_nom'],       // ← nom attendu par le frontend
                 'dateArchivage' => $r['date_archivage'],
                 'nbDocuments'   => (int) $r['nb_documents'],
                 'miniature'     => null,
@@ -292,6 +315,7 @@ class DossierController extends AbstractController
         return $this->json(['total' => $total, 'page' => $page, 'size' => $size, 'data' => $data]);
     }
 
+    // ── EN RETARD ──────────────────────────────────────────────────────────
     #[Route('/en-retard', name: 'en_retard', methods: ['GET'])]
     public function enRetard(): JsonResponse
     {
@@ -325,6 +349,7 @@ class DossierController extends AbstractController
         ], $dossiers));
     }
 
+    // ── EXPORT CSV ─────────────────────────────────────────────────────────
     #[Route('/export-csv', name: 'export_csv', methods: ['GET'])]
     public function exportCsv(Request $request): Response
     {
@@ -366,6 +391,9 @@ class DossierController extends AbstractController
         return $response;
     }
 
+
+    // ── SUIVI CITOYEN (public) ─────────────────────────────────────────────
+    // Route identique à C# : GET /api/dossiers/suivi/{numero}
     #[Route('/suivi/{numero}', name: 'suivi', methods: ['GET'])]
     public function suivi(string $numero): JsonResponse
     {
@@ -395,6 +423,7 @@ class DossierController extends AbstractController
         ]);
     }
 
+    // ── DÉTAIL ─────────────────────────────────────────────────────────────
     #[Route('/{id}', name: 'show', methods: ['GET'])]
     public function show(string $id): JsonResponse
     {
@@ -405,6 +434,7 @@ class DossierController extends AbstractController
         return $this->json($this->serializeDetail($dossier));
     }
 
+    // ── CRÉER ──────────────────────────────────────────────────────────────
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(Request $request): JsonResponse
     {
@@ -441,6 +471,7 @@ class DossierController extends AbstractController
         return $this->json(['id' => $dossier->getId(), 'numero' => $dossier->getNumero()], 201);
     }
 
+    // ── CHANGER STATUT (avec email rejet + notification agents) ────────────
     #[Route('/{id}/statut', name: 'changer_statut', methods: ['PUT', 'PATCH'])]
     public function changerStatut(string $id, Request $request): JsonResponse
     {
@@ -449,8 +480,8 @@ class DossierController extends AbstractController
             return $this->json(['message' => 'Dossier non trouvé'], 404);
         }
 
-        $data = json_decode($request->getContent(), true);
-        $code = $data['nouveauStatutCode'] ?? $data['statut'] ?? null;
+        $data          = json_decode($request->getContent(), true);
+        $code          = $data['nouveauStatutCode'] ?? $data['statut'] ?? null;
         $nouveauStatut = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => $code]);
 
         if (!$nouveauStatut) {
@@ -479,6 +510,7 @@ class DossierController extends AbstractController
         $this->em->flush();
         $this->journaliser('DOSSIERS', 'CHANGEMENT_STATUT', "Statut changé en {$nouveauStatut->getCode()} – {$dossier->getNumero()}");
 
+        // Email au citoyen
         if ($dossier->getEmailCitoyen()) {
             try {
                 if ($code === 'REJETE') {
@@ -498,9 +530,12 @@ class DossierController extends AbstractController
                         $data['commentaire'] ?? null
                     );
                 }
-            } catch (\Exception $e) {}
+            } catch (\Exception $e) {
+                // Ne pas bloquer si l'email échoue
+            }
         }
 
+        // Notification aux agents du service
         $this->notifierAgentsService(
             $dossier,
             "Changement de statut - {$dossier->getNumero()}",
@@ -511,6 +546,7 @@ class DossierController extends AbstractController
         return $this->json(['message' => 'Statut mis à jour', 'statut' => $nouveauStatut->getLibelle()]);
     }
 
+    // ── TRANSFÉRER ─────────────────────────────────────────────────────────
     #[Route('/{id}/transferer', name: 'transferer', methods: ['PUT', 'POST', 'PATCH'])]
     public function transferer(string $id, Request $request): JsonResponse
     {
@@ -519,7 +555,7 @@ class DossierController extends AbstractController
             return $this->json(['message' => 'Dossier non trouvé'], 404);
         }
 
-        $data = json_decode($request->getContent(), true);
+        $data    = json_decode($request->getContent(), true);
         $service = $this->em->getRepository(Service::class)->find($data['serviceId'] ?? 0);
         if (!$service || !$service->isEstActif()) {
             return $this->json(['message' => 'Service destination invalide ou inactif'], 400);
@@ -543,7 +579,8 @@ class DossierController extends AbstractController
 
         $this->em->persist($historique);
         $this->em->flush();
-        $this->journaliser('DOSSIERS', 'TRANSFERT', "Transféré vers {$service->getNom()} – {$dossier->getNumero()}");
+        $this->journaliser('DOSSIERS', 'TRANSFERT',
+    "Transféré vers {$service->getNom()} – {$dossier->getNumero()}");
 
         $this->notifierAgentsService(
             $dossier,
@@ -555,6 +592,7 @@ class DossierController extends AbstractController
         return $this->json(['message' => 'Dossier transféré avec succès.']);
     }
 
+    // ── ARCHIVER (POST sur un dossier spécifique) ──────────────────────────
     #[Route('/{id}/archiver', name: 'archiver', methods: ['PUT', 'POST'])]
     public function archiver(string $id): JsonResponse
     {
@@ -583,6 +621,7 @@ class DossierController extends AbstractController
         return $this->json(['message' => 'Dossier archivé avec succès']);
     }
 
+    // ── UPLOAD DOCUMENT ────────────────────────────────────────────────────
     #[Route('/{id}/upload', name: 'upload', methods: ['POST'])]
     public function upload(string $id, Request $request): JsonResponse
     {
@@ -596,19 +635,23 @@ class DossierController extends AbstractController
             return $this->json(['message' => 'Aucun fichier reçu'], 400);
         }
 
-        $citoyenEmail = $dossier->getEmailCitoyen();
-        $citoyenNom   = $dossier->getNomCitoyen();
-        if ($citoyenEmail) {
-            $dossierDir = $this->getCitizenFolder($citoyenNom, $citoyenEmail);
-        } else {
-            $dossierDir = $id;
-        }
-        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/citoyens/' . $dossierDir;
+
+$citoyenEmail = $dossier->getEmailCitoyen();
+$citoyenNom   = $dossier->getNomCitoyen();
+if ($citoyenEmail) {
+    $dossierDir = $this->getCitizenFolder($citoyenNom, $citoyenEmail);
+} else {
+    $dossierDir = $id; // fallback UUID
+}
+$uploadDir = $this->getParameter('kernel.project_dir')
+    . '/public/uploads/citoyens/' . $dossierDir;
+
 
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0775, true);
         }
 
+        // Capturer les métadonnées AVANT move()
         $nomOriginal = $fichier->getClientOriginalName();
         $mimeType    = $fichier->getClientMimeType();
         $taille      = $fichier->getSize();
@@ -617,6 +660,7 @@ class DossierController extends AbstractController
 
         $fichier->move($uploadDir, $nomUnique);
 
+        // Désactiver les versions précédentes
         foreach ($dossier->getVersionsDocument() as $v) {
             $v->setEstActive(false);
         }
@@ -645,162 +689,139 @@ class DossierController extends AbstractController
         return $this->json(['message' => 'Document uploadé', 'version' => $numeroVersion], 201);
     }
 
+    // ── DÉPÔT PUBLIC CITOYEN ───────────────────────────────────────────────
     #[Route('/public/depot', name: 'public_depot', methods: ['POST'])]
-public function publicDepot(Request $request): JsonResponse
-{
-    $serviceId = $request->request->get('serviceId');
-    $service = $this->em->getRepository(Service::class)->find($serviceId);
-    if (!$service) {
-        return $this->json(['message' => "Service invalide. Vérifiez que l'ID service existe."], 400);
-    }
-
-    $statut = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => 'RECU']);
-    if (!$statut) {
-        return $this->json(['message' => 'Statut initial introuvable.'], 500);
-    }
-
-    $fichiers = $request->files->all('fichiers');
-    if (empty($fichiers)) {
-        $fichierUnique = $request->files->get('fichiers');
-        $fichiers = $fichierUnique ? [$fichierUnique] : [];
-    }
-    if (!is_array($fichiers)) {
-        $fichiers = array_filter([$fichiers]);
-    }
-    $fichiers = array_values(array_filter($fichiers));
-
-    $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-    $maxSize = 10 * 1024 * 1024; // 10 Mo
-    $maxFiles = 4;
-
-    if (count($fichiers) === 0) {
-        return $this->json(['message' => 'Veuillez joindre au moins un fichier PDF ou image.'], 400);
-    }
-    if (count($fichiers) > $maxFiles) {
-        return $this->json(['message' => "Maximum $maxFiles fichiers autorisés."], 400);
-    }
-
-    foreach ($fichiers as $fichier) {
-        $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
-        if (!in_array($ext, $allowedExt, true)) {
-            return $this->json(['message' => "Format non autorisé : {$fichier->getClientOriginalName()}."], 400);
+    public function publicDepot(Request $request): JsonResponse
+    {
+        $serviceId = $request->request->get('serviceId');
+        $service   = $this->em->getRepository(Service::class)->find($serviceId);
+        if (!$service) {
+            return $this->json(['message' => "Service invalide. Vérifiez que l'ID service existe."], 400);
         }
-        if ($fichier->getSize() > $maxSize) {
-            return $this->json(['message' => "Le fichier {$fichier->getClientOriginalName()} dépasse la limite de 10 Mo."], 400);
-        }
-    }
 
+        $statut = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => 'RECU']);
+        if (!$statut) {
+            return $this->json(['message' => 'Statut initial introuvable.'], 500);
+        }
+
+        $dossier = new Dossier();
+        $dossier->setTitre($request->request->get('titre', ''))
+                ->setDescription($request->request->get('description'))
+                ->setNomCitoyen($request->request->get('nomCitoyen', ''))
+                ->setEmailCitoyen($request->request->get('emailCitoyen'))
+                ->setTelephoneCitoyen($request->request->get('telephoneCitoyen'))
+                ->setService($service)
+                ->setStatut($statut)
+                ->setNumero($this->genererNumero());
+
+        $this->em->persist($dossier);
+        $this->em->flush();
+        $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
+
+        // Traitement des fichiers joints
+        $fichiers = $request->files->get('fichiers') ?? [];
+        if (!is_array($fichiers)) {
+            $fichiers = array_filter([$fichiers]);
+        }
+
+        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+        $maxSize    = 10 * 1024 * 1024; // 10 Mo
+        $maxFiles   = 4;
+
+        if (count($fichiers) > $maxFiles) {
+            return $this->json(['message' => "Maximum $maxFiles fichiers autorisés."], 400);
+        }
+
+            if (!empty($fichiers)) {
     $citoyenEmail = $request->request->get('emailCitoyen');
     $citoyenNom   = $request->request->get('nomCitoyen', 'Inconnu');
-    $titre        = $request->request->get('titre', '');
-    $description  = $request->request->get('description');
-    $telephone    = $request->request->get('telephoneCitoyen');
-
-    // Créer un seul dossier
-    $dossier = new Dossier();
-    $dossier->setTitre($titre)
-            ->setDescription($description)
-            ->setNomCitoyen($citoyenNom)
-            ->setEmailCitoyen($citoyenEmail)
-            ->setTelephoneCitoyen($telephone)
-            ->setService($service)
-            ->setStatut($statut)
-            ->setNumero($this->genererNumero());
-
-    // Dossier temporaire pour l'upload : on a besoin de l'ID après flush
-    $this->em->persist($dossier);
-    $this->em->flush();
-
-    // Préparer le répertoire citoyen pour les fichiers
-    $dossierDir = $citoyenEmail ? $this->getCitizenFolder($citoyenNom, $citoyenEmail) : $dossier->getId();
-    $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/citoyens/' . $dossierDir;
+    if ($citoyenEmail) {
+        $dossierDir = $this->getCitizenFolder($citoyenNom, $citoyenEmail);
+        $uploadDir  = $this->getParameter('kernel.project_dir')
+            . '/public/uploads/citoyens/' . $dossierDir;
+    } else {
+        $dossierDir = $dossier->getId();
+        $uploadDir  = $this->getParameter('kernel.project_dir')
+            . '/public/uploads/citoyens/' . $dossierDir;
+    }
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0775, true);
     }
 
-    $conn = $this->em->getConnection();
-    $conn->beginTransaction();
-    try {
-        $numeroVersion = 1;
-        foreach ($fichiers as $index => $fichier) {
-            // Désactiver les versions précédentes si nécessaire (normalement pas)
-            // On ne désactive pas les anciennes versions car toutes seront actives ?
-            // Selon la logique, un même dossier peut avoir plusieurs versions actives ? Non, une seule version active à la fois.
-            // Mais pour plusieurs fichiers déposés simultanément, on peut les considérer comme des documents séparés.
-            // Or la structure actuelle ne supporte qu'un document actif par dossier (estActive). Pour plusieurs fichiers,
-            // il faudrait soit les stocker comme des versions distinctes mais toutes actives ? Ce n'est pas cohérent.
-            // Alternative : faire un upload multiple avec plusieurs `VersionDocument` pour le même dossier, mais seulement le dernier uploadé aura `estActive = true` si on désactive les autres.
-            // Pour que tous les fichiers soient visibles, on peut ne pas désactiver les versions précédentes lorsqu'on ajoute plusieurs fichiers au même moment.
-            // On va donc contourner en ne désactivant que si on veut remplacer un fichier existant. Pour un dépôt initial, on ajoute simplement.
-            // Mais comme on ne veut pas de désactivation, on ne touche pas à l'état des versions.
-            $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
-            $nomOriginal = $fichier->getClientOriginalName();
-            $mimeType    = $fichier->getClientMimeType();
-            $taille      = $fichier->getSize();
-            $nomUnique   = uniqid('doc_', true) . '_' . ($index + 1) . '.' . $ext;
 
-            $fichier->move($uploadDir, $nomUnique);
 
-            // On crée une version pour chaque fichier, avec un numéro de version incrémenté
-            $version = new VersionDocument();
-            $version->setDossier($dossier)
-                    ->setNomFichier($nomOriginal)
-                    ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
-                    ->setTypeFichier($mimeType)
-                    ->setTailleFichier($taille)
-                    ->setNumeroVersion($numeroVersion++)
-                    ->setEstActive(true);  // Tous sont actifs ? Cela peut causer un conflit si plus tard on veut une version active unique. À réfléchir.
-            $this->em->persist($version);
+            $numVersion = 1;
+            foreach ($fichiers as $fichier) {
+                if (!$fichier) continue;
+
+                $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
+                if (!in_array($ext, $allowedExt)) continue;
+                if ($fichier->getSize() > $maxSize) continue;
+
+                $nomOriginal = $fichier->getClientOriginalName();
+                $mimeType    = $fichier->getClientMimeType();
+                $taille      = $fichier->getSize();
+                $nomUnique   = uniqid('doc_', true) . "_$numVersion.$ext";
+
+                $fichier->move($uploadDir, $nomUnique);
+
+                $version = new VersionDocument();
+                $version->setDossier($dossier)
+                        ->setNomFichier($nomOriginal)
+                        ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
+                        ->setTypeFichier($mimeType)
+                        ->setTailleFichier($taille)
+                        ->setNumeroVersion($numVersion++)
+                        ->setEstActive(true);
+
+                $this->em->persist($version);
+
+            }
+            $this->em->flush();
         }
-        $this->em->flush();
-        $conn->commit();
-    } catch (\Throwable $e) {
-        $conn->rollBack();
-        return $this->json(['message' => "Erreur lors de l'enregistrement des fichiers : " . $e->getMessage()], 500);
-    }
 
-    $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
-
-    if ($citoyenEmail) {
-        try {
-            $this->emailService->envoyerConfirmationDepot(
-                $citoyenEmail,
-                $citoyenNom,
-                $dossier->getNumero(),
-                $titre
-            );
-        } catch (\Throwable $e) {
-            $this->journaliser('EMAIL', 'ECHEC_DEPOT', "Email non envoyé à {$citoyenEmail} pour {$dossier->getNumero()}");
+        // Email de confirmation au citoyen
+        $emailCitoyen = $request->request->get('emailCitoyen');
+        if ($emailCitoyen) {
+            try {
+                $this->emailService->envoyerConfirmationDepot(
+                    $emailCitoyen,
+                    $request->request->get('nomCitoyen', ''),
+                    $dossier->getNumero(),
+                    $dossier->getTitre()
+                );
+            } catch (\Throwable $e) {
+                // Ne pas bloquer si email échoue
+            }
         }
-    }
 
-    // Notifier les administrateurs
-    $admins = $this->em->getRepository(Utilisateur::class)
-        ->createQueryBuilder('u')
-        ->where('u.typeUtilisateur = :type')
-        ->andWhere('u.estActif = true')
-        ->setParameter('type', 'Administrateur')
-        ->getQuery()->getResult();
+        // Notifier tous les administrateurs (ou utilisateurs avec rôle Admin)
+$admins = $this->em->getRepository(Utilisateur::class)
+    ->createQueryBuilder('u')
+    ->where('u.typeUtilisateur = :type')
+    ->andWhere('u.estActif = true')
+    ->setParameter('type', 'Administrateur')
+    ->getQuery()->getResult();
 
-    foreach ($admins as $admin) {
-        $notif = new Notification();
-        $notif->setUtilisateur($admin)
-              ->setTitre("Nouveau dossier citoyen")
-              ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()} avec " . count($fichiers) . " document(s).")
-              ->setType('INFO')
-              ->setDossierId($dossier->getId())
-              ->setNumeroDossier($dossier->getNumero());
-        $this->em->persist($notif);
-    }
-    $this->em->flush();
-
-    return $this->json([
-        'numeroDossier'   => $dossier->getNumero(),
-        'message'         => 'Dossier déposé avec succès.',
-        'nombreDocuments' => count($fichiers),
-    ], 201);
+foreach ($admins as $admin) {
+    $notif = new Notification();
+    $notif->setUtilisateur($admin)
+          ->setTitre("Nouveau dossier citoyen")
+          ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()}.")
+          ->setType('INFO')
+          ->setDossierId($dossier->getId())
+          ->setNumeroDossier($dossier->getNumero());
+    $this->em->persist($notif);
 }
+$this->em->flush();
 
+        return $this->json([
+            'numeroDossier' => $dossier->getNumero(),
+            'message'       => 'Dossier déposé avec succès.',
+        ], 201);
+    }
+
+    // ── TÉLÉCHARGER FICHIER ────────────────────────────────────────────────
     #[Route('/fichiers/download', name: 'fichier_download', methods: ['GET'])]
     public function fichierDownload(Request $request): Response
     {
@@ -821,21 +842,14 @@ public function publicDepot(Request $request): JsonResponse
     }
 
     private function getCitizenFolder(string $nomCitoyen, string $emailCitoyen): string
-    {
-        $safeName  = preg_replace('/[^a-zA-Z0-9]/', '_', $nomCitoyen);
-        $safeEmail = str_replace(['@', '.'], ['_', '_'], $emailCitoyen);
-        return $safeName . '_' . $safeEmail;
-    }
+{
+    // Exemple : DJOMNANG_EMMANUELLA_JOYCE_joycedjomnang_gmail_com
+    $safeName  = preg_replace('/[^a-zA-Z0-9]/', '_', $nomCitoyen);
+    $safeEmail = str_replace(['@', '.'], ['_', '_'], $emailCitoyen);
+    return $safeName . '_' . $safeEmail;
+}
 
-    private function genererNumeroAvecOffset(int $offset): string
-    {
-        $annee = date('Y');
-        $count = (int) $this->em->getRepository(Dossier::class)
-            ->createQueryBuilder('d')->select('COUNT(d.id)')
-            ->getQuery()->getSingleScalarResult();
-        return sprintf('DOS-%s-%05d', $annee, $count + $offset + 1);
-    }
-
+    // ── HELPERS ────────────────────────────────────────────────────────────
     private function genererNumero(): string
     {
         $annee = date('Y');
