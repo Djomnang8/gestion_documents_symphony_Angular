@@ -646,162 +646,160 @@ class DossierController extends AbstractController
     }
 
     #[Route('/public/depot', name: 'public_depot', methods: ['POST'])]
-    public function publicDepot(Request $request): JsonResponse
-    {
-        $serviceId = $request->request->get('serviceId');
-        $service   = $this->em->getRepository(Service::class)->find($serviceId);
-        if (!$service) {
-            return $this->json(['message' => "Service invalide. Vérifiez que l'ID service existe."], 400);
-        }
+public function publicDepot(Request $request): JsonResponse
+{
+    $serviceId = $request->request->get('serviceId');
+    $service = $this->em->getRepository(Service::class)->find($serviceId);
+    if (!$service) {
+        return $this->json(['message' => "Service invalide. Vérifiez que l'ID service existe."], 400);
+    }
 
-        $statut = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => 'RECU']);
-        if (!$statut) {
-            return $this->json(['message' => 'Statut initial introuvable.'], 500);
-        }
+    $statut = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => 'RECU']);
+    if (!$statut) {
+        return $this->json(['message' => 'Statut initial introuvable.'], 500);
+    }
 
-        $fichiers = $request->files->all('fichiers');
-        if (empty($fichiers)) {
-            $fichierUnique = $request->files->get('fichiers');
-            $fichiers = $fichierUnique ? [$fichierUnique] : [];
-        }
-        if (!is_array($fichiers)) {
-            $fichiers = array_filter([$fichiers]);
-        }
-        $fichiers = array_values(array_filter($fichiers));
+    $fichiers = $request->files->all('fichiers');
+    if (empty($fichiers)) {
+        $fichierUnique = $request->files->get('fichiers');
+        $fichiers = $fichierUnique ? [$fichierUnique] : [];
+    }
+    if (!is_array($fichiers)) {
+        $fichiers = array_filter([$fichiers]);
+    }
+    $fichiers = array_values(array_filter($fichiers));
 
-        $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-        $maxSize = 10 * 1024 * 1024; // 10 Mo
-        $maxFiles = 4;
+    $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+    $maxSize = 10 * 1024 * 1024; // 10 Mo
+    $maxFiles = 4;
 
-        if (count($fichiers) === 0) {
-            return $this->json(['message' => 'Veuillez joindre au moins un fichier PDF ou image.'], 400);
-        }
-        if (count($fichiers) > $maxFiles) {
-            return $this->json(['message' => "Maximum $maxFiles fichiers autorisés."], 400);
-        }
+    if (count($fichiers) === 0) {
+        return $this->json(['message' => 'Veuillez joindre au moins un fichier PDF ou image.'], 400);
+    }
+    if (count($fichiers) > $maxFiles) {
+        return $this->json(['message' => "Maximum $maxFiles fichiers autorisés."], 400);
+    }
 
-        foreach ($fichiers as $fichier) {
+    foreach ($fichiers as $fichier) {
+        $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
+        if (!in_array($ext, $allowedExt, true)) {
+            return $this->json(['message' => "Format non autorisé : {$fichier->getClientOriginalName()}."], 400);
+        }
+        if ($fichier->getSize() > $maxSize) {
+            return $this->json(['message' => "Le fichier {$fichier->getClientOriginalName()} dépasse la limite de 10 Mo."], 400);
+        }
+    }
+
+    $citoyenEmail = $request->request->get('emailCitoyen');
+    $citoyenNom   = $request->request->get('nomCitoyen', 'Inconnu');
+    $titre        = $request->request->get('titre', '');
+    $description  = $request->request->get('description');
+    $telephone    = $request->request->get('telephoneCitoyen');
+
+    // Créer un seul dossier
+    $dossier = new Dossier();
+    $dossier->setTitre($titre)
+            ->setDescription($description)
+            ->setNomCitoyen($citoyenNom)
+            ->setEmailCitoyen($citoyenEmail)
+            ->setTelephoneCitoyen($telephone)
+            ->setService($service)
+            ->setStatut($statut)
+            ->setNumero($this->genererNumero());
+
+    // Dossier temporaire pour l'upload : on a besoin de l'ID après flush
+    $this->em->persist($dossier);
+    $this->em->flush();
+
+    // Préparer le répertoire citoyen pour les fichiers
+    $dossierDir = $citoyenEmail ? $this->getCitizenFolder($citoyenNom, $citoyenEmail) : $dossier->getId();
+    $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/citoyens/' . $dossierDir;
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0775, true);
+    }
+
+    $conn = $this->em->getConnection();
+    $conn->beginTransaction();
+    try {
+        $numeroVersion = 1;
+        foreach ($fichiers as $index => $fichier) {
+            // Désactiver les versions précédentes si nécessaire (normalement pas)
+            // On ne désactive pas les anciennes versions car toutes seront actives ?
+            // Selon la logique, un même dossier peut avoir plusieurs versions actives ? Non, une seule version active à la fois.
+            // Mais pour plusieurs fichiers déposés simultanément, on peut les considérer comme des documents séparés.
+            // Or la structure actuelle ne supporte qu'un document actif par dossier (estActive). Pour plusieurs fichiers,
+            // il faudrait soit les stocker comme des versions distinctes mais toutes actives ? Ce n'est pas cohérent.
+            // Alternative : faire un upload multiple avec plusieurs `VersionDocument` pour le même dossier, mais seulement le dernier uploadé aura `estActive = true` si on désactive les autres.
+            // Pour que tous les fichiers soient visibles, on peut ne pas désactiver les versions précédentes lorsqu'on ajoute plusieurs fichiers au même moment.
+            // On va donc contourner en ne désactivant que si on veut remplacer un fichier existant. Pour un dépôt initial, on ajoute simplement.
+            // Mais comme on ne veut pas de désactivation, on ne touche pas à l'état des versions.
             $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
-            if (!in_array($ext, $allowedExt, true)) {
-                return $this->json(['message' => "Format non autorisé : {$fichier->getClientOriginalName()}."], 400);
-            }
-            if ($fichier->getSize() > $maxSize) {
-                return $this->json(['message' => "Le fichier {$fichier->getClientOriginalName()} dépasse la limite de 10 Mo."], 400);
-            }
-        }
+            $nomOriginal = $fichier->getClientOriginalName();
+            $mimeType    = $fichier->getClientMimeType();
+            $taille      = $fichier->getSize();
+            $nomUnique   = uniqid('doc_', true) . '_' . ($index + 1) . '.' . $ext;
 
-        $citoyenEmail = $request->request->get('emailCitoyen');
-        $citoyenNom   = $request->request->get('nomCitoyen', 'Inconnu');
-        $titreBase    = $request->request->get('titre', '');
-        $description  = $request->request->get('description');
-        $telephone    = $request->request->get('telephoneCitoyen');
+            $fichier->move($uploadDir, $nomUnique);
 
-        // Répertoire citoyen (commun pour tous les dossiers du même citoyen)
-        $dossierDir = $citoyenEmail ? $this->getCitizenFolder($citoyenNom, $citoyenEmail) : uniqid('citoyen_', true);
-        $uploadDir  = $this->getParameter('kernel.project_dir') . '/public/uploads/citoyens/' . $dossierDir;
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0775, true);
-        }
-
-        $createdDossiers = [];
-
-        $conn = $this->em->getConnection();
-        $conn->beginTransaction();
-        try {
-            foreach ($fichiers as $index => $fichier) {
-                $titre = $titreBase;
-                if (count($fichiers) > 1) {
-                    $titre .= ' — ' . $fichier->getClientOriginalName();
-                }
-
-                $dossier = new Dossier();
-                $dossier->setTitre($titre)
-                        ->setDescription($description)
-                        ->setNomCitoyen($citoyenNom)
-                        ->setEmailCitoyen($citoyenEmail)
-                        ->setTelephoneCitoyen($telephone)
-                        ->setService($service)
-                        ->setStatut($statut)
-                        ->setNumero($this->genererNumeroAvecOffset($index));
-
-                $this->em->persist($dossier);
-
-                // Sauvegarder pour avoir l'ID si besoin (mais on flush après)
-                $this->em->flush();
-
-                $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
-                $nomOriginal = $fichier->getClientOriginalName();
-                $mimeType    = $fichier->getClientMimeType();
-                $taille      = $fichier->getSize();
-                $nomUnique   = uniqid('doc_', true) . '_' . ($index + 1) . '.' . $ext;
-
-                $fichier->move($uploadDir, $nomUnique);
-
-                $version = new VersionDocument();
-                $version->setDossier($dossier)
-                        ->setNomFichier($nomOriginal)
-                        ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
-                        ->setTypeFichier($mimeType)
-                        ->setTailleFichier($taille)
-                        ->setNumeroVersion(1)
-                        ->setEstActive(true);
-
-                $this->em->persist($version);
-                $createdDossiers[] = $dossier;
-            }
-            $this->em->flush();
-            $conn->commit();
-        } catch (\Throwable $e) {
-            $conn->rollBack();
-            return $this->json(['message' => "Erreur lors de l'enregistrement du dépôt : " . $e->getMessage()], 500);
-        }
-
-        $numeros = array_map(fn(Dossier $d) => $d->getNumero(), $createdDossiers);
-        $this->journaliser('DOSSIERS', 'DEPOT', 'Dépôt public : ' . implode(', ', $numeros));
-
-        if ($citoyenEmail) {
-            try {
-                // Utiliser l'envoi simple (premier dossier pour le message)
-                $this->emailService->envoyerConfirmationDepot(
-                    $citoyenEmail,
-                    $citoyenNom,
-                    $numeros[0],
-                    $titreBase
-                );
-            } catch (\Throwable $e) {
-                $this->journaliser('EMAIL', 'ECHEC_DEPOT', "Email non envoyé à {$citoyenEmail} pour " . implode(', ', $numeros));
-            }
-        }
-
-        $admins = $this->em->getRepository(Utilisateur::class)
-            ->createQueryBuilder('u')
-            ->where('u.typeUtilisateur = :type')
-            ->andWhere('u.estActif = true')
-            ->setParameter('type', 'Administrateur')
-            ->getQuery()->getResult();
-
-        foreach ($admins as $admin) {
-            foreach ($createdDossiers as $dossier) {
-                $notif = new Notification();
-                $notif->setUtilisateur($admin)
-                      ->setTitre('Nouveau dossier citoyen')
-                      ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()}.")
-                      ->setType('INFO')
-                      ->setDossierId($dossier->getId())
-                      ->setNumeroDossier($dossier->getNumero());
-                $this->em->persist($notif);
-            }
+            // On crée une version pour chaque fichier, avec un numéro de version incrémenté
+            $version = new VersionDocument();
+            $version->setDossier($dossier)
+                    ->setNomFichier($nomOriginal)
+                    ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
+                    ->setTypeFichier($mimeType)
+                    ->setTailleFichier($taille)
+                    ->setNumeroVersion($numeroVersion++)
+                    ->setEstActive(true);  // Tous sont actifs ? Cela peut causer un conflit si plus tard on veut une version active unique. À réfléchir.
+            $this->em->persist($version);
         }
         $this->em->flush();
-
-        return $this->json([
-            'numeroDossier'   => $numeros[0],
-            'numerosDossiers' => $numeros,
-            'message'         => count($numeros) > 1
-                ? count($numeros) . ' dossiers déposés avec succès.'
-                : 'Dossier déposé avec succès.',
-        ], 201);
+        $conn->commit();
+    } catch (\Throwable $e) {
+        $conn->rollBack();
+        return $this->json(['message' => "Erreur lors de l'enregistrement des fichiers : " . $e->getMessage()], 500);
     }
+
+    $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
+
+    if ($citoyenEmail) {
+        try {
+            $this->emailService->envoyerConfirmationDepot(
+                $citoyenEmail,
+                $citoyenNom,
+                $dossier->getNumero(),
+                $titre
+            );
+        } catch (\Throwable $e) {
+            $this->journaliser('EMAIL', 'ECHEC_DEPOT', "Email non envoyé à {$citoyenEmail} pour {$dossier->getNumero()}");
+        }
+    }
+
+    // Notifier les administrateurs
+    $admins = $this->em->getRepository(Utilisateur::class)
+        ->createQueryBuilder('u')
+        ->where('u.typeUtilisateur = :type')
+        ->andWhere('u.estActif = true')
+        ->setParameter('type', 'Administrateur')
+        ->getQuery()->getResult();
+
+    foreach ($admins as $admin) {
+        $notif = new Notification();
+        $notif->setUtilisateur($admin)
+              ->setTitre("Nouveau dossier citoyen")
+              ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()} avec " . count($fichiers) . " document(s).")
+              ->setType('INFO')
+              ->setDossierId($dossier->getId())
+              ->setNumeroDossier($dossier->getNumero());
+        $this->em->persist($notif);
+    }
+    $this->em->flush();
+
+    return $this->json([
+        'numeroDossier'   => $dossier->getNumero(),
+        'message'         => 'Dossier déposé avec succès.',
+        'nombreDocuments' => count($fichiers),
+    ], 201);
+}
 
     #[Route('/fichiers/download', name: 'fichier_download', methods: ['GET'])]
     public function fichierDownload(Request $request): Response
