@@ -11,7 +11,6 @@ import { TranslatePipe } from '../../../core/pipes/translate.pipe';
 
 interface DepotResponse {
   numeroDossier: string;
-  numerosDossiers?: string[];
   message: string;
 }
 
@@ -135,14 +134,14 @@ export class Depot implements OnInit {
     formData.append('description',      val.description);
     formData.append('serviceId',        serviceId.toString());
     for (let i = 0; i < this.fichiersSelectionnes.length; i++) {
-      formData.append('fichiers[]', this.fichiersSelectionnes[i]);
+      formData.append('fichiers', this.fichiersSelectionnes[i]);
     }
 
     // ✅ URL correcte : /api/dossiers/public/depot
     this.http.post<DepotResponse>(`${environment.apiUrl}/api/dossiers/public/depot`, formData)
       .pipe(finalize(() => this.ngZone.run(() => { this.enCours = false; this.cdr.detectChanges(); })))
       .subscribe({
-        next:  (res) => this.ngZone.run(() => { this.succes = true; this.numeroDossier = (res.numerosDossiers?.join(', ') || res.numeroDossier); this.cdr.detectChanges(); }),
+        next:  (res) => this.ngZone.run(() => { this.succes = true; this.numeroDossier = res.numeroDossier; this.cdr.detectChanges(); }),
         error: (err) => alert(err.error?.message || 'Erreur lors du dépôt. Veuillez réessayer.')
       });
   }
