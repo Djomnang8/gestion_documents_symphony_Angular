@@ -32,6 +32,53 @@ class EmailService
         $this->mailer->send($email);
     }
 
+    public function envoyerConfirmationDepotMultiple(
+        string $emailCitoyen,
+        string $nomCitoyen,
+        array $numerosDossiers,
+        string $titreDossier
+    ): void {
+        if (count($numerosDossiers) <= 1) {
+            $this->envoyerConfirmationDepot($emailCitoyen, $nomCitoyen, $numerosDossiers[0] ?? '', $titreDossier);
+            return;
+        }
+
+        $listeNumeros = '<ul>' . implode('', array_map(fn(string $numero) => '<li><strong>' . htmlspecialchars($numero, ENT_QUOTES, 'UTF-8') . '</strong></li>', $numerosDossiers)) . '</ul>';
+        $email = (new Email())
+            ->from("$this->fromName <$this->fromEmail>")
+            ->to($emailCitoyen)
+            ->subject('✅ Confirmation de dépôt — ' . count($numerosDossiers) . ' dossiers reçus')
+            ->html($this->templateConfirmationDepotMultiple($nomCitoyen, $listeNumeros, $titreDossier));
+
+        $this->mailer->send($email);
+    }
+
+    private function templateConfirmationDepotMultiple(string $nom, string $listeNumeros, string $titre): string
+    {
+        return "
+        <!DOCTYPE html>
+        <html lang='fr'>
+        <head><meta charset='UTF-8'><title>Confirmation de dépôt</title></head>
+        <body style='font-family: Arial, sans-serif; background:#f4f4f4; padding:20px;'>
+          <div style='max-width:600px; margin:auto; background:#fff; border-radius:8px; overflow:hidden;'>
+            <div style='background:#1e3a5f; padding:26px; text-align:center;'>
+              <h1 style='color:#fff; margin:0; font-size:1.4rem;'>🏛️ Gestion des Documents</h1>
+            </div>
+            <div style='padding:30px;'>
+              <h2 style='color:#27ae60;'>✅ Vos dossiers ont bien été reçus</h2>
+              <p>Bonjour <strong>$nom</strong>,</p>
+              <p>Nous confirmons la réception de vos dossiers pour : <strong>$titre</strong>.</p>
+              <div style='background:#f0f4ff; border-left:4px solid #1e3a5f; padding:16px; border-radius:4px; margin:20px 0;'>
+                <p style='margin-top:0;'><strong>Numéros de suivi :</strong></p>
+                $listeNumeros
+              </div>
+              <p>📌 Conservez ces numéros pour suivre chaque dossier séparément.</p>
+              <p>Cordialement,<br><strong>L'équipe de Gestion des Documents</strong></p>
+            </div>
+          </div>
+        </body></html>";
+    }
+
     /**
      * Email envoyé au citoyen quand le statut de son dossier change
      */
