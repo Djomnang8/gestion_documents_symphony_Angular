@@ -759,13 +759,46 @@ $uploadDir = $this->getParameter('kernel.project_dir')
         try {
             $this->em->persist($dossier);
 
+        $dossierDir = $citoyenEmail ? $this->getCitizenFolder($citoyenNom, $citoyenEmail) : uniqid('citoyen_', true);
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/citoyens/' . $dossierDir;
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0775, true);
+        }
+
+        $dossiers = [];
+        $conn = $this->em->getConnection();
+        $conn->beginTransaction();
+        try {
+            foreach ($fichiers as $index => $fichier) {
+                $dossier = new Dossier();
+                $titre = $request->request->get('titre', '');
+                if (count($fichiers) > 1) {
+                    $titre .= ' — ' . $fichier->getClientOriginalName();
+                }
+
+                $dossier->setTitre($titre)
+                        ->setDescription($request->request->get('description'))
+                        ->setNomCitoyen($citoyenNom)
+                        ->setEmailCitoyen($citoyenEmail)
+                        ->setTelephoneCitoyen($request->request->get('telephoneCitoyen'))
+                        ->setService($service)
+                        ->setStatut($statut)
+                        ->setNumero($this->genererNumeroAvecOffset($index));
+
+                $this->em->persist($dossier);
+
+
             foreach ($fichiers as $index => $fichier) {
                 $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
                 $nomOriginal = $fichier->getClientOriginalName();
                 $mimeType = $fichier->getClientMimeType();
                 $taille = $fichier->getSize();
+
                 $numeroVersion = $index + 1;
                 $nomUnique = uniqid('doc_', true) . "_{$numeroVersion}.{$ext}";
+
+                $nomUnique = uniqid('doc_', true) . '_1.' . $ext;
+
                 $fichier->move($uploadDir, $nomUnique);
 
                 $version = new VersionDocument();
@@ -774,10 +807,18 @@ $uploadDir = $this->getParameter('kernel.project_dir')
                         ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
                         ->setTypeFichier($mimeType)
                         ->setTailleFichier($taille)
+
                         ->setNumeroVersion($numeroVersion)
                         ->setEstActive(true);
 
                 $this->em->persist($version);
+
+                        ->setNumeroVersion(1)
+                        ->setEstActive(true);
+
+                $this->em->persist($version);
+                $dossiers[] = $dossier;
+
             }
 
             $this->em->flush();
@@ -786,6 +827,7 @@ $uploadDir = $this->getParameter('kernel.project_dir')
             $conn->rollBack();
             return $this->json(['message' => "Erreur lors de l'enregistrement du dépôt."], 500);
         }
+
 
         $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
 
@@ -799,6 +841,21 @@ $uploadDir = $this->getParameter('kernel.project_dir')
                 );
             } catch (\Throwable $e) {
                 $this->journaliser('EMAIL', 'ECHEC_DEPOT', "Email non envoyé à {$citoyenEmail} pour {$dossier->getNumero()}");
+
+        $numeros = array_map(fn(Dossier $d) => $d->getNumero(), $dossiers);
+        $this->journaliser('DOSSIERS', 'DEPOT', 'Dépôt public : ' . implode(', ', $numeros));
+
+        if ($citoyenEmail) {
+            try {
+                $this->emailService->envoyerConfirmationDepotMultiple(
+                    $citoyenEmail,
+                    $citoyenNom,
+                    $numeros,
+                    $request->request->get('titre', '')
+                );
+            } catch (\Throwable $e) {
+                $this->journaliser('EMAIL', 'ECHEC_DEPOT', "Email non envoyé à {$citoyenEmail} pour " . implode(', ', $numeros));
+
             }
         }
 
@@ -810,6 +867,7 @@ $uploadDir = $this->getParameter('kernel.project_dir')
             ->getQuery()->getResult();
 
         foreach ($admins as $admin) {
+
             $notif = new Notification();
             $notif->setUtilisateur($admin)
                   ->setTitre('Nouveau dossier citoyen')
@@ -818,13 +876,33 @@ $uploadDir = $this->getParameter('kernel.project_dir')
                   ->setDossierId($dossier->getId())
                   ->setNumeroDossier($dossier->getNumero());
             $this->em->persist($notif);
+
+            foreach ($dossiers as $dossier) {
+                $notif = new Notification();
+                $notif->setUtilisateur($admin)
+                      ->setTitre('Nouveau dossier citoyen')
+                      ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()}.")
+                      ->setType('INFO')
+                      ->setDossierId($dossier->getId())
+                      ->setNumeroDossier($dossier->getNumero());
+                $this->em->persist($notif);
+            }
+
         }
         $this->em->flush();
 
         return $this->json([
+
             'numeroDossier' => $dossier->getNumero(),
             'message' => 'Dossier déposé avec succès.',
             'nombreDocuments' => count($fichiers),
+
+            'numeroDossier' => $numeros[0],
+            'numerosDossiers' => $numeros,
+            'message' => count($numeros) > 1
+                ? count($numeros) . ' dossiers déposés avec succès.'
+                : 'Dossier déposé avec succès.',
+
         ], 201);
     }
 
@@ -857,6 +935,15 @@ $uploadDir = $this->getParameter('kernel.project_dir')
 }
 
     // ── HELPERS ────────────────────────────────────────────────────────────
+    private function genererNumeroAvecOffset(int $offset): string
+    {
+        $annee = date('Y');
+        $count = (int) $this->em->getRepository(Dossier::class)
+            ->createQueryBuilder('d')->select('COUNT(d.id)')
+            ->getQuery()->getSingleScalarResult();
+        return sprintf('DOS-%s-%05d', $annee, $count + $offset + 1);
+    }
+
     private function genererNumero(): string
     {
         $annee = date('Y');
