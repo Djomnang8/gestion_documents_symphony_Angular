@@ -2,7 +2,7 @@
 import { Component, signal, computed, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ArchivageService, DossierAArchiver } from '../../../core/services/archivage.service';
+import { ArchivageService, DossierAArchiver, ServiceOption } from '../../../core/services/archivage.service';
 import { finalize } from 'rxjs';
 
 @Component({
@@ -24,12 +24,20 @@ export class DossiersAArchiver implements OnInit {
   chargement = signal(false);
   erreur = signal('');
 
-  services = ['Direction Générale', 'Service Administratif', 'Service Technique', 'Archives Centrales'];
+  services = signal<ServiceOption[]>([]);
 
   tousLesDossiers = signal<DossierAArchiver[]>([]);
 
   ngOnInit() {
+    this.chargerServices();
     this.chargerDossiers();
+  }
+
+  chargerServices() {
+    this.archService.getServices().subscribe({
+      next: (services) => this.services.set(services),
+      error: () => this.erreur.set('Impossible de charger la liste des services.')
+    });
   }
 
   chargerDossiers() {

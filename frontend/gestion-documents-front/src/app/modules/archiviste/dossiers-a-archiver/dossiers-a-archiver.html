@@ -35,8 +35,8 @@
       (change)="setFiltreService($any($event.target).value)"
       class="select-service">
       <option value="">Tous les services</option>
-      @for (s of services; track s) {
-        <option [value]="s">{{ s }}</option>
+      @for (s of services(); track s.id) {
+        <option [value]="s.nom">{{ s.nom }}</option>
       }
     </select>
   </div>

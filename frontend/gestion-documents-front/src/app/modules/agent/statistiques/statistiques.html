@@ -133,67 +133,24 @@
 
     </div>
 
-    <!-- ─── GRILLE GRAPHIQUES 2×2 ─────────────────────────── -->
-    <div class="graphiques-grille">
-
-      <!-- [1] Barres groupées -->
-      <div class="graph-card">
-        <div class="graph-header">
-          <span class="graph-titre">Dossiers par statut</span>
-          <span class="graph-badge" style="background:#1565C011;color:#1565C0">Barres</span>
-        </div>
-        <div class="graph-body">
-          <canvas #canvasBarres></canvas>
-        </div>
-      </div>
-
-      <!-- [2] Camembert -->
-      <div class="graph-card">
-        <div class="graph-header">
-          <span class="graph-titre">Répartition par service</span>
-          <span class="graph-badge" style="background:#5E35B111;color:#5E35B1">Secteurs</span>
-        </div>
-        <div class="graph-body">
-          <canvas #canvasCamembert></canvas>
-        </div>
-      </div>
-
-      <!-- [3] Courbe délai -->
-      <div class="graph-card">
-        <div class="graph-header">
-          <span class="graph-titre">Délai moyen de traitement</span>
-          <span class="graph-badge" style="background:#FFB30011;color:#FFB300">jours · seuil 7j</span>
-        </div>
-        <div class="graph-body">
-          <canvas #canvasCourbe></canvas>
-        </div>
-      </div>
-
-      <!-- [4] Gauge -->
-      <div class="graph-card">
-        <div class="graph-header">
-          <span class="graph-titre">Indicateur de rejet</span>
-          <span class="graph-badge"
-            [style.background]="s.tauxRejet > 20 ? '#E5393511' : '#43A04711'"
-            [style.color]="s.tauxRejet > 20 ? '#E53935' : '#43A047'">
-            {{ s.tauxRejet > 20 ? '⚠ Critique' : '✓ Normal' }}
-          </span>
-        </div>
-        <div class="graph-body graph-body--gauge">
-          <canvas #canvasGauge></canvas>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ─── GRAPHIQUE PLEINE LARGEUR [5] ──────────────────── -->
+    <!-- ─── GRAPHIQUES ALIGNÉS SUR LA PAGE STATISTIQUES D'ARCHIVAGE ───── -->
     <div class="graph-card graph-card--full">
       <div class="graph-header">
-        <span class="graph-titre">Évolution mensuelle des dossiers</span>
-        <span class="graph-badge" style="background:#1565C011;color:#1565C0">12 mois · Aire</span>
+        <span class="graph-titre">Évolution mensuelle des dossiers (12 mois)</span>
+        <span class="graph-badge" style="background:#E0F2F1;color:#00897B">Aire · Menthe</span>
       </div>
       <div class="graph-body">
         <canvas #canvasAire></canvas>
+      </div>
+    </div>
+
+    <div class="graph-card graph-card--full">
+      <div class="graph-header">
+        <span class="graph-titre">Dossiers par service</span>
+        <span class="graph-badge" style="background:#E8EAF6;color:#3949AB">Barres</span>
+      </div>
+      <div class="graph-body">
+        <canvas #canvasServices></canvas>
       </div>
     </div>
 

@@ -33,6 +33,12 @@ export interface DossierArchive {
   miniature?: string; 
 }
 
+export interface ServiceOption {
+  id: number;
+  nom: string;
+  description?: string;
+}
+
 export interface VersionDocument {
   id: string;
   dossierId: string;
@@ -51,6 +57,7 @@ export class ArchivageService {
   private http = inject(HttpClient);
   private apiUrl = `${environment.apiUrl}/api/archivage`;
   private versionsUrl = `${environment.apiUrl}/api/versions`;
+  private servicesUrl = `${environment.apiUrl}/api/services`;
 
   getKpi(): Observable<KpiArchiviste> {
     return this.http.get<KpiArchiviste>(`${this.apiUrl}/kpi`);
@@ -58,6 +65,10 @@ export class ArchivageService {
 
   getDossiersAArchiver(): Observable<DossierAArchiver[]> {
     return this.http.get<DossierAArchiver[]>(`${this.apiUrl}/a-archiver`);
+  }
+
+  getServices(): Observable<ServiceOption[]> {
+    return this.http.get<ServiceOption[]>(this.servicesUrl);
   }
 
   archiverDossier(dossierId: string): Observable<{ message: string }> {

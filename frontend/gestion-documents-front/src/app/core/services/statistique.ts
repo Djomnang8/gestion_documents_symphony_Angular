@@ -67,11 +67,12 @@ export class StatistiqueService {
     return this.http.get<StatsArchiviste>(`${this.api}/archiviste`, { params });
   }
 
-  /** Export PDF — URL directe (GET avec token dans header via interceptor) */
-  exporterPdf(filtre: StatistiquesFiltre): Observable<Blob> {
-    let params = new HttpParams().set('periode', filtre.periode);
+  /** Export PDF — vrai fichier application/pdf généré par le backend. */
+  exporterPdf(filtre: StatistiquesFiltre, contexte: 'documentaire' | 'archivage' = 'documentaire'): Observable<Blob> {
+    let params = new HttpParams().set('periode', filtre.periode).set('contexte', contexte);
+    if (filtre.dateDebut) params = params.set('dateDebut', filtre.dateDebut);
+    if (filtre.dateFin) params = params.set('dateFin', filtre.dateFin);
     if (filtre.serviceId) params = params.set('serviceId', filtre.serviceId.toString());
-    // L'URL correcte est /api/statistiques/export/pdf
     return this.http.get(`${this.api}/export/pdf`, { params, responseType: 'blob' });
   }
 

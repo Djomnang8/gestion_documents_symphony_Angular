@@ -694,7 +694,7 @@ $uploadDir = $this->getParameter('kernel.project_dir')
     public function publicDepot(Request $request): JsonResponse
     {
         $serviceId = $request->request->get('serviceId');
-        $service   = $this->em->getRepository(Service::class)->find($serviceId);
+        $service = $this->em->getRepository(Service::class)->find($serviceId);
         if (!$service) {
             return $this->json(['message' => "Service invalide. Vérifiez que l'ID service existe."], 400);
         }
@@ -704,65 +704,72 @@ $uploadDir = $this->getParameter('kernel.project_dir')
             return $this->json(['message' => 'Statut initial introuvable.'], 500);
         }
 
-        $dossier = new Dossier();
-        $dossier->setTitre($request->request->get('titre', ''))
-                ->setDescription($request->request->get('description'))
-                ->setNomCitoyen($request->request->get('nomCitoyen', ''))
-                ->setEmailCitoyen($request->request->get('emailCitoyen'))
-                ->setTelephoneCitoyen($request->request->get('telephoneCitoyen'))
-                ->setService($service)
-                ->setStatut($statut)
-                ->setNumero($this->genererNumero());
-
-        $this->em->persist($dossier);
-        $this->em->flush();
-        $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
-
-        // Traitement des fichiers joints
-        $fichiers = $request->files->get('fichiers') ?? [];
+        $fichiers = $request->files->all('fichiers');
+        if (empty($fichiers)) {
+            $fichierUnique = $request->files->get('fichiers');
+            $fichiers = $fichierUnique ? [$fichierUnique] : [];
+        }
         if (!is_array($fichiers)) {
             $fichiers = array_filter([$fichiers]);
         }
+        $fichiers = array_values(array_filter($fichiers));
 
         $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-        $maxSize    = 10 * 1024 * 1024; // 10 Mo
-        $maxFiles   = 4;
+        $maxSize = 10 * 1024 * 1024; // 10 Mo
+        $maxFiles = 4;
 
+        if (count($fichiers) === 0) {
+            return $this->json(['message' => 'Veuillez joindre au moins un fichier PDF ou image.'], 400);
+        }
         if (count($fichiers) > $maxFiles) {
             return $this->json(['message' => "Maximum $maxFiles fichiers autorisés."], 400);
         }
 
-            if (!empty($fichiers)) {
-    $citoyenEmail = $request->request->get('emailCitoyen');
-    $citoyenNom   = $request->request->get('nomCitoyen', 'Inconnu');
-    if ($citoyenEmail) {
-        $dossierDir = $this->getCitizenFolder($citoyenNom, $citoyenEmail);
-        $uploadDir  = $this->getParameter('kernel.project_dir')
-            . '/public/uploads/citoyens/' . $dossierDir;
-    } else {
-        $dossierDir = $dossier->getId();
-        $uploadDir  = $this->getParameter('kernel.project_dir')
-            . '/public/uploads/citoyens/' . $dossierDir;
-    }
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0775, true);
-    }
+        foreach ($fichiers as $fichier) {
+            $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
+            if (!in_array($ext, $allowedExt, true)) {
+                return $this->json(['message' => "Format non autorisé : {$fichier->getClientOriginalName()}."], 400);
+            }
+            if ($fichier->getSize() > $maxSize) {
+                return $this->json(['message' => "Le fichier {$fichier->getClientOriginalName()} dépasse la limite de 10 Mo."], 400);
+            }
+        }
 
+        $citoyenEmail = $request->request->get('emailCitoyen');
+        $citoyenNom = $request->request->get('nomCitoyen', 'Inconnu');
+        $dossierDir = $citoyenEmail ? $this->getCitizenFolder($citoyenNom, $citoyenEmail) : uniqid('citoyen_', true);
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/citoyens/' . $dossierDir;
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0775, true);
+        }
 
+        $dossiers = [];
+        $conn = $this->em->getConnection();
+        $conn->beginTransaction();
+        try {
+            foreach ($fichiers as $index => $fichier) {
+                $dossier = new Dossier();
+                $titre = $request->request->get('titre', '');
+                if (count($fichiers) > 1) {
+                    $titre .= ' — ' . $fichier->getClientOriginalName();
+                }
 
-            $numVersion = 1;
-            foreach ($fichiers as $fichier) {
-                if (!$fichier) continue;
+                $dossier->setTitre($titre)
+                        ->setDescription($request->request->get('description'))
+                        ->setNomCitoyen($citoyenNom)
+                        ->setEmailCitoyen($citoyenEmail)
+                        ->setTelephoneCitoyen($request->request->get('telephoneCitoyen'))
+                        ->setService($service)
+                        ->setStatut($statut)
+                        ->setNumero($this->genererNumeroAvecOffset($index));
+
+                $this->em->persist($dossier);
 
                 $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
-                if (!in_array($ext, $allowedExt)) continue;
-                if ($fichier->getSize() > $maxSize) continue;
-
                 $nomOriginal = $fichier->getClientOriginalName();
-                $mimeType    = $fichier->getClientMimeType();
-                $taille      = $fichier->getSize();
-                $nomUnique   = uniqid('doc_', true) . "_$numVersion.$ext";
-
+                $mimeType = $fichier->getClientMimeType();
+                $taille = $fichier->getSize();
+                $nomUnique = uniqid('doc_', true) . '_1.' . $ext;
                 $fichier->move($uploadDir, $nomUnique);
 
                 $version = new VersionDocument();
@@ -771,53 +778,63 @@ $uploadDir = $this->getParameter('kernel.project_dir')
                         ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
                         ->setTypeFichier($mimeType)
                         ->setTailleFichier($taille)
-                        ->setNumeroVersion($numVersion++)
+                        ->setNumeroVersion(1)
                         ->setEstActive(true);
 
                 $this->em->persist($version);
-
+                $dossiers[] = $dossier;
             }
+
             $this->em->flush();
+            $conn->commit();
+        } catch (\Throwable $e) {
+            $conn->rollBack();
+            return $this->json(['message' => "Erreur lors de l'enregistrement du dépôt."], 500);
         }
 
-        // Email de confirmation au citoyen
-        $emailCitoyen = $request->request->get('emailCitoyen');
-        if ($emailCitoyen) {
+        $numeros = array_map(fn(Dossier $d) => $d->getNumero(), $dossiers);
+        $this->journaliser('DOSSIERS', 'DEPOT', 'Dépôt public : ' . implode(', ', $numeros));
+
+        if ($citoyenEmail) {
             try {
-                $this->emailService->envoyerConfirmationDepot(
-                    $emailCitoyen,
-                    $request->request->get('nomCitoyen', ''),
-                    $dossier->getNumero(),
-                    $dossier->getTitre()
+                $this->emailService->envoyerConfirmationDepotMultiple(
+                    $citoyenEmail,
+                    $citoyenNom,
+                    $numeros,
+                    $request->request->get('titre', '')
                 );
             } catch (\Throwable $e) {
-                // Ne pas bloquer si email échoue
+                $this->journaliser('EMAIL', 'ECHEC_DEPOT', "Email non envoyé à {$citoyenEmail} pour " . implode(', ', $numeros));
             }
         }
 
-        // Notifier tous les administrateurs (ou utilisateurs avec rôle Admin)
-$admins = $this->em->getRepository(Utilisateur::class)
-    ->createQueryBuilder('u')
-    ->where('u.typeUtilisateur = :type')
-    ->andWhere('u.estActif = true')
-    ->setParameter('type', 'Administrateur')
-    ->getQuery()->getResult();
+        $admins = $this->em->getRepository(Utilisateur::class)
+            ->createQueryBuilder('u')
+            ->where('u.typeUtilisateur = :type')
+            ->andWhere('u.estActif = true')
+            ->setParameter('type', 'Administrateur')
+            ->getQuery()->getResult();
 
-foreach ($admins as $admin) {
-    $notif = new Notification();
-    $notif->setUtilisateur($admin)
-          ->setTitre("Nouveau dossier citoyen")
-          ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()}.")
-          ->setType('INFO')
-          ->setDossierId($dossier->getId())
-          ->setNumeroDossier($dossier->getNumero());
-    $this->em->persist($notif);
-}
-$this->em->flush();
+        foreach ($admins as $admin) {
+            foreach ($dossiers as $dossier) {
+                $notif = new Notification();
+                $notif->setUtilisateur($admin)
+                      ->setTitre('Nouveau dossier citoyen')
+                      ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()}.")
+                      ->setType('INFO')
+                      ->setDossierId($dossier->getId())
+                      ->setNumeroDossier($dossier->getNumero());
+                $this->em->persist($notif);
+            }
+        }
+        $this->em->flush();
 
         return $this->json([
-            'numeroDossier' => $dossier->getNumero(),
-            'message'       => 'Dossier déposé avec succès.',
+            'numeroDossier' => $numeros[0],
+            'numerosDossiers' => $numeros,
+            'message' => count($numeros) > 1
+                ? count($numeros) . ' dossiers déposés avec succès.'
+                : 'Dossier déposé avec succès.',
         ], 201);
     }
 
@@ -850,6 +867,15 @@ $this->em->flush();
 }
 
     // ── HELPERS ────────────────────────────────────────────────────────────
+    private function genererNumeroAvecOffset(int $offset): string
+    {
+        $annee = date('Y');
+        $count = (int) $this->em->getRepository(Dossier::class)
+            ->createQueryBuilder('d')->select('COUNT(d.id)')
+            ->getQuery()->getSingleScalarResult();
+        return sprintf('DOS-%s-%05d', $annee, $count + $offset + 1);
+    }
+
     private function genererNumero(): string
     {
         $annee = date('Y');

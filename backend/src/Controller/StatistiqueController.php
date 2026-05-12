@@ -118,67 +118,119 @@ class StatistiqueController extends AbstractController
         ]);
     }
 
-     #[Route('/export/pdf', name: 'export_pdf', methods: ['GET'])]
+    private function pdfEscape(string $text): string
+    {
+        return str_replace(['\\', '(', ')'], ['\\\\', '\(', '\)'], $text);
+    }
+
+    private function genererPdfSimple(string $titre, array $lignes): string
+    {
+        $content = "BT
+/F1 18 Tf
+50 790 Td
+(" . $this->pdfEscape($titre) . ") Tj
+/F1 11 Tf
+0 -28 Td
+";
+        foreach ($lignes as $ligne) {
+            $content .= "(" . $this->pdfEscape((string) $ligne) . ") Tj
+0 -16 Td
+";
+        }
+        $content .= "ET";
+
+        $objects = [];
+        $objects[] = "1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+";
+        $objects[] = "2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+";
+        $objects[] = "3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj
+";
+        $objects[] = "4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+";
+        $objects[] = "5 0 obj << /Length " . strlen($content) . " >> stream
+" . $content . "
+endstream endobj
+";
+
+        $pdf = "%PDF-1.4
+";
+        $offsets = [0];
+        foreach ($objects as $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= $object;
+        }
+        $xref = strlen($pdf);
+        $pdf .= "xref
+0 " . (count($objects) + 1) . "
+0000000000 65535 f
+";
+        for ($i = 1; $i <= count($objects); $i++) {
+            $pdf .= sprintf("%010d 00000 n
+", $offsets[$i]);
+        }
+        $pdf .= "trailer << /Size " . (count($objects) + 1) . " /Root 1 0 R >>
+startxref
+{$xref}
+%%EOF";
+
+        return $pdf;
+    }
+
+    #[Route('/export/pdf', name: 'export_pdf', methods: ['GET'])]
     public function exportPdf(Request $request): Response
     {
-        $periode   = $request->query->get('periode', '30j');
-        $serviceId = $request->query->get('serviceId');
-        $conn      = $this->em->getConnection();
-        $repo      = $this->em->getRepository(Dossier::class);
+        $contexte = $request->query->get('contexte', 'documentaire');
+        $conn = $this->em->getConnection();
+        $repo = $this->em->getRepository(Dossier::class);
+        $date = (new \DateTimeImmutable())->format('d/m/Y H:i');
+        $lignes = ["Genere le : {$date}", ""];
 
-        $statuts = $this->em->getRepository(StatutDossier::class)->findAll();
-        $rows    = [];
-        $total   = 0;
-        foreach ($statuts as $s) {
-            if ($s->getCode() === 'ARCHIVE') continue;
-            $cnt = $repo->count(['statut' => $s]);
-            $rows[] = ['statut' => $s->getLibelle(), 'count' => $cnt];
-            $total += $cnt;
-        }
-
-        $parService = [];
-        try {
-            $parService = $conn->executeQuery(
-                "SELECT sv.nom AS service, COUNT(d.id) AS count FROM dossiers d
-                 JOIN services sv ON d.service_id = sv.id
-                 JOIN statuts_dossier sd ON d.statut_id = sd.id
-                 WHERE sd.code != 'ARCHIVE' GROUP BY sv.nom ORDER BY count DESC"
-            )->fetchAllAssociative();
-        } catch (\Throwable $e) {}
-
-        $date = (new \DateTimeImmutable())->format('d/m/Y');
-        $html = "<!DOCTYPE html><html><head><meta charset='UTF-8'>
-<style>
-  body{font-family:Arial,sans-serif;font-size:12px;padding:20px}
-  h1{color:#2c3e50;border-bottom:2px solid #3498db;padding-bottom:8px}
-  h2{color:#34495e;margin-top:20px}
-  table{width:100%;border-collapse:collapse;margin-top:10px}
-  th{background:#3498db;color:white;padding:8px;text-align:left}
-  td{padding:6px 8px;border-bottom:1px solid #ddd}
-  tr:nth-child(even){background:#f8f9fa}
-  .kpi{display:inline-block;background:#ecf0f1;padding:10px 20px;margin:5px;border-radius:4px}
-  @media print{button{display:none}}
-</style></head><body>
-<h1>Rapport Statistiques — {$date}</h1>
-<div class='kpi'><strong>Total dossiers actifs :</strong> {$total}</div>
-<h2>Répartition par statut</h2>
-<table><tr><th>Statut</th><th>Nombre</th></tr>";
-        foreach ($rows as $r) {
-            $html .= "<tr><td>{$r['statut']}</td><td>{$r['count']}</td></tr>";
-        }
-        $html .= "</table>";
-        if ($parService) {
-            $html .= "<h2>Répartition par service</h2><table><tr><th>Service</th><th>Dossiers</th></tr>";
-            foreach ($parService as $r) {
-                $html .= "<tr><td>{$r['service']}</td><td>{$r['count']}</td></tr>";
+        if ($contexte === 'archivage') {
+            $statutArchive = $this->em->getRepository(StatutDossier::class)->findOneBy(['code' => 'ARCHIVE']);
+            $totalArchives = $statutArchive ? $repo->count(['statut' => $statutArchive]) : 0;
+            $lignes[] = "Total archives : {$totalArchives}";
+            $lignes[] = "";
+            $lignes[] = "Archives par service :";
+            try {
+                $rows = $conn->executeQuery("SELECT sv.nom AS service, COUNT(d.id) AS count FROM dossiers d JOIN services sv ON d.service_id = sv.id JOIN statuts_dossier sd ON d.statut_id = sd.id WHERE sd.code = 'ARCHIVE' GROUP BY sv.nom ORDER BY count DESC")->fetchAllAssociative();
+                foreach ($rows as $r) {
+                    $lignes[] = "- {$r['service']} : {$r['count']}";
+                }
+            } catch (\Throwable $e) {
+                $lignes[] = "Donnees par service indisponibles.";
             }
-            $html .= "</table>";
+            $filename = 'rapport_archivage_' . date('Y-m-d') . '.pdf';
+            $titre = 'Rapport de statistiques archivage';
+        } else {
+            $statuts = $this->em->getRepository(StatutDossier::class)->findAll();
+            $total = 0;
+            $lignes[] = "Repartition par statut :";
+            foreach ($statuts as $s) {
+                if ($s->getCode() === 'ARCHIVE') continue;
+                $cnt = $repo->count(['statut' => $s]);
+                $total += $cnt;
+                $lignes[] = "- {$s->getLibelle()} : {$cnt}";
+            }
+            $lignes[] = "";
+            $lignes[] = "Total dossiers actifs : {$total}";
+            $lignes[] = "";
+            $lignes[] = "Dossiers par service :";
+            try {
+                $rows = $conn->executeQuery("SELECT sv.nom AS service, COUNT(d.id) AS count FROM dossiers d JOIN services sv ON d.service_id = sv.id JOIN statuts_dossier sd ON d.statut_id = sd.id WHERE sd.code != 'ARCHIVE' GROUP BY sv.nom ORDER BY count DESC")->fetchAllAssociative();
+                foreach ($rows as $r) {
+                    $lignes[] = "- {$r['service']} : {$r['count']}";
+                }
+            } catch (\Throwable $e) {
+                $lignes[] = "Donnees par service indisponibles.";
+            }
+            $filename = 'rapport_statistiques_' . date('Y-m-d') . '.pdf';
+            $titre = 'Rapport de statistiques documentaires';
         }
-        $html .= "<br><small>Rapport généré le {$date}</small></body></html>";
 
-        return new Response($html, 200, [
-            'Content-Type'        => 'text/html; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="rapport_' . date('Ymd') . '.html"',
+        return new Response($this->genererPdfSimple($titre, $lignes), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
 

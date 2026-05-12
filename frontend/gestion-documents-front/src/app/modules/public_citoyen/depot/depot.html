@@ -139,7 +139,7 @@
                (dragover)="onDragOver($event)"
                (dragleave)="onDragLeave()"
                (drop)="onDrop($event)"
-               *ngIf="fichiersSelectionnes.length < 10">
+               *ngIf="fichiersSelectionnes.length < 4">
             <input type="file" id="fichier-input" hidden multiple
                    accept=".pdf,.jpg,.jpeg,.png"
                    (change)="onFichierChoisi($event)">
