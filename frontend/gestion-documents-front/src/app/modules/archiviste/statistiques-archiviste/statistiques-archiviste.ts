@@ -63,6 +63,25 @@ export class StatistiquesArchivistePage implements OnInit, AfterViewInit {
 
   appliquer() { this.charger(); }
 
+  exporterPdf() {
+    const filtre: StatistiquesFiltre = {
+      periode: this.periode,
+      dateDebut: this.periode === 'custom' ? this.dateDebut : undefined,
+      dateFin: this.periode === 'custom' ? this.dateFin : undefined
+    };
+    this.svc.exporterPdf(filtre, 'archivage').subscribe({
+      next: (blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `rapport_archivage_${new Date().toISOString().slice(0,10)}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      },
+      error: () => alert('Erreur export PDF archivage.')
+    });
+  }
+
   labelPeriode(): string {
     const m: Record<string,string> = { '7j':'7 derniers jours','30j':'30 derniers jours','90j':'90 derniers jours','custom':'Personnalisée' };
     return m[this.periode] ?? '30 derniers jours';
