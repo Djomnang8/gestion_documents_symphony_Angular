@@ -693,6 +693,7 @@ $uploadDir = $this->getParameter('kernel.project_dir')
         #[Route('/public/depot', name: 'public_depot', methods: ['POST'])]
 public function publicDepot(Request $request): JsonResponse
 {
+    // 1. Récupération des données
     $serviceId = $request->request->get('serviceId');
     $service = $this->em->getRepository(Service::class)->find($serviceId);
     if (!$service) {
@@ -704,7 +705,7 @@ public function publicDepot(Request $request): JsonResponse
         return $this->json(['message' => 'Statut initial introuvable.'], 500);
     }
 
-    // 1. Création du dossier unique
+    // Création du dossier
     $dossier = new Dossier();
     $dossier->setTitre($request->request->get('titre', ''))
             ->setDescription($request->request->get('description'))
@@ -715,73 +716,75 @@ public function publicDepot(Request $request): JsonResponse
             ->setStatut($statut)
             ->setNumero($this->genererNumero());
 
-    $this->em->persist($dossier);
-
-    // 2. Traitement des fichiers
+    // Initialisation des versions
     $fichiers = $request->files->get('fichiers') ?? [];
     if (!is_array($fichiers)) {
         $fichiers = array_filter([$fichiers]);
     }
-
-    $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-    $maxSize = 10 * 1024 * 1024;
-    $maxFiles = 4;
+    $fichiers = array_values($fichiers);
 
     if (count($fichiers) === 0) {
         return $this->json(['message' => 'Aucun fichier joint.'], 400);
     }
-    if (count($fichiers) > $maxFiles) {
-        return $this->json(['message' => "Maximum $maxFiles fichiers autorisés."], 400);
-    }
 
-    // Répertoire de stockage
+    // Répertoire de stockage (création si besoin)
     $citoyenEmail = $request->request->get('emailCitoyen');
     $citoyenNom   = $request->request->get('nomCitoyen', 'Inconnu');
     $dossierDir = $citoyenEmail ? $this->getCitizenFolder($citoyenNom, $citoyenEmail) : uniqid('citoyen_', true);
-    $projectDir = $this->getParameter('kernel.project_dir');
-    if (!$projectDir) {
-        return $this->json(['message' => 'Erreur de configuration du répertoire.'], 500);
-    }
-    $uploadDir = $projectDir . '/public/uploads/citoyens/' . $dossierDir;
+    $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/citoyens/' . $dossierDir;
+
     if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0775, true);
+        if (!mkdir($uploadDir, 0775, true) && !is_dir($uploadDir)) {
+            return $this->json(['message' => 'Impossible de créer le répertoire de stockage.'], 500);
+        }
     }
 
-    $numVersion = 1;
-    foreach ($fichiers as $fichier) {
-        if (!$fichier) continue;
+    // Début transaction Doctrine
+    $this->em->beginTransaction();
+    try {
+        $this->em->persist($dossier);
+        $this->em->flush();
 
-        $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
-        if (!in_array($ext, $allowedExt)) {
-            return $this->json(['message' => "Format non autorisé : {$fichier->getClientOriginalName()}."], 400);
+        $numVersion = 1;
+        foreach ($fichiers as $fichier) {
+            if (!$fichier) continue;
+
+            $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
+            $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+            if (!in_array($ext, $allowedExt)) {
+                throw new \Exception("Format non autorisé : {$fichier->getClientOriginalName()}");
+            }
+            if ($fichier->getSize() > 10 * 1024 * 1024) {
+                throw new \Exception("Fichier trop volumineux : {$fichier->getClientOriginalName()}");
+            }
+
+            $nomOriginal = $fichier->getClientOriginalName();
+            $mimeType    = $fichier->getClientMimeType();
+            $taille      = $fichier->getSize();
+            $nomUnique   = uniqid('doc_', true) . '_' . $numVersion . '.' . $ext;
+
+            $fichier->move($uploadDir, $nomUnique);
+
+            $version = new VersionDocument();
+            $version->setDossier($dossier)
+                    ->setNomFichier($nomOriginal)
+                    ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
+                    ->setTypeFichier($mimeType)
+                    ->setTailleFichier($taille)
+                    ->setNumeroVersion($numVersion)
+                    ->setEstActive(true);
+            $this->em->persist($version);
+            $numVersion++;
         }
-        if ($fichier->getSize() > $maxSize) {
-            return $this->json(['message' => "Le fichier {$fichier->getClientOriginalName()} dépasse 10 Mo."], 400);
-        }
 
-        $nomOriginal = $fichier->getClientOriginalName();
-        $mimeType    = $fichier->getClientMimeType();
-        $taille      = $fichier->getSize();
-        $nomUnique   = uniqid('doc_', true) . "_$numVersion." . $ext;
-
-        $fichier->move($uploadDir, $nomUnique);
-
-        $version = new VersionDocument();
-        $version->setDossier($dossier)
-                ->setNomFichier($nomOriginal)
-                ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
-                ->setTypeFichier($mimeType)
-                ->setTailleFichier($taille)
-                ->setNumeroVersion($numVersion)
-                ->setEstActive(true);
-        $this->em->persist($version);
-        $numVersion++;
+        $this->em->flush();
+        $this->em->commit();
+    } catch (\Throwable $e) {
+        $this->em->rollback();
+        return $this->json(['message' => 'Erreur lors du dépôt : ' . $e->getMessage()], 500);
     }
 
-    $this->em->flush();
-    $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
-
-    // Email de confirmation
+    // Envoi email (hors transaction)
     if ($citoyenEmail) {
         try {
             $this->emailService->envoyerConfirmationDepot(
@@ -795,7 +798,7 @@ public function publicDepot(Request $request): JsonResponse
         }
     }
 
-    // Notification aux administrateurs
+    // Notifications
     $admins = $this->em->getRepository(Utilisateur::class)
         ->createQueryBuilder('u')
         ->where('u.typeUtilisateur = :type')
@@ -818,7 +821,7 @@ public function publicDepot(Request $request): JsonResponse
     return $this->json([
         'numeroDossier' => $dossier->getNumero(),
         'message'       => 'Dossier déposé avec succès.',
-        'nombreDocuments' => count($fichiers)
+        'nombreDocuments' => count($fichiers),
     ], 201);
 }
 
