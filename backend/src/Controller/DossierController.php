@@ -718,10 +718,15 @@ $uploadDir = $this->getParameter('kernel.project_dir')
         $this->em->flush();
         $this->journaliser('DOSSIERS', 'DEPOT', "Dépôt public : {$dossier->getNumero()}");
 
-        // Traitement des fichiers joints
-        $fichiers = $request->files->get('fichiers') ?? [];
-        if (!is_array($fichiers)) {
-            $fichiers = array_filter([$fichiers]);
+        // ── Traitement des fichiers joints ────────────────────────────────
+        // Supporte fichiers[] (depuis le frontend Angular) ET fichiers (fallback)
+        $fichiersRaw = $request->files->all()['fichiers'] ?? $request->files->get('fichiers');
+        if (is_null($fichiersRaw)) {
+            $fichiers = [];
+        } elseif (!is_array($fichiersRaw)) {
+            $fichiers = [$fichiersRaw];
+        } else {
+            $fichiers = array_values(array_filter($fichiersRaw));
         }
 
         $allowedExt = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
@@ -732,55 +737,53 @@ $uploadDir = $this->getParameter('kernel.project_dir')
             return $this->json(['message' => "Maximum $maxFiles fichiers autorisés."], 400);
         }
 
-            if (!empty($fichiers)) {
-    $citoyenEmail = $request->request->get('emailCitoyen');
-    $citoyenNom   = $request->request->get('nomCitoyen', 'Inconnu');
-    if ($citoyenEmail) {
-        $dossierDir = $this->getCitizenFolder($citoyenNom, $citoyenEmail);
-        $uploadDir  = $this->getParameter('kernel.project_dir')
-            . '/public/uploads/citoyens/' . $dossierDir;
-    } else {
-        $dossierDir = $dossier->getId();
-        $uploadDir  = $this->getParameter('kernel.project_dir')
-            . '/public/uploads/citoyens/' . $dossierDir;
-    }
-    if (!is_dir($uploadDir)) {
-        mkdir($uploadDir, 0775, true);
-    }
+        if (!empty($fichiers)) {
+            try {
+                $citoyenEmail = $request->request->get('emailCitoyen');
+                $citoyenNom   = $request->request->get('nomCitoyen', 'Inconnu');
+                $dossierDir   = $citoyenEmail
+                    ? $this->getCitizenFolder($citoyenNom, $citoyenEmail)
+                    : $dossier->getId();
+                $uploadDir = $this->getParameter('kernel.project_dir')
+                    . '/public/uploads/citoyens/' . $dossierDir;
 
+                if (!is_dir($uploadDir)) {
+                    mkdir($uploadDir, 0775, true);
+                }
 
+                $numVersion = 1;
+                foreach ($fichiers as $fichier) {
+                    if (!$fichier) continue;
 
-            $numVersion = 1;
-            foreach ($fichiers as $fichier) {
-                if (!$fichier) continue;
+                    $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
+                    if (!in_array($ext, $allowedExt)) continue;
+                    if ($fichier->getSize() > $maxSize) continue;
 
-                $ext = strtolower($fichier->getClientOriginalExtension() ?: 'bin');
-                if (!in_array($ext, $allowedExt)) continue;
-                if ($fichier->getSize() > $maxSize) continue;
+                    $nomOriginal = $fichier->getClientOriginalName();
+                    $mimeType    = $fichier->getClientMimeType();
+                    $taille      = $fichier->getSize();
+                    $nomUnique   = uniqid('doc_', true) . "_$numVersion.$ext";
 
-                $nomOriginal = $fichier->getClientOriginalName();
-                $mimeType    = $fichier->getClientMimeType();
-                $taille      = $fichier->getSize();
-                $nomUnique   = uniqid('doc_', true) . "_$numVersion.$ext";
+                    $fichier->move($uploadDir, $nomUnique);
 
-                $fichier->move($uploadDir, $nomUnique);
+                    $version = new VersionDocument();
+                    $version->setDossier($dossier)
+                            ->setNomFichier($nomOriginal)
+                            ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
+                            ->setTypeFichier($mimeType)
+                            ->setTailleFichier($taille)
+                            ->setNumeroVersion($numVersion++)
+                            ->setEstActive(true);
 
-                $version = new VersionDocument();
-                $version->setDossier($dossier)
-                        ->setNomFichier($nomOriginal)
-                        ->setCheminFichier('/uploads/citoyens/' . $dossierDir . '/' . $nomUnique)
-                        ->setTypeFichier($mimeType)
-                        ->setTailleFichier($taille)
-                        ->setNumeroVersion($numVersion++)
-                        ->setEstActive(true);
-
-                $this->em->persist($version);
-
+                    $this->em->persist($version);
+                }
+                $this->em->flush();
+            } catch (\Throwable $e) {
+                // Ne pas bloquer le dépôt si l'upload échoue
             }
-            $this->em->flush();
         }
 
-        // Email de confirmation au citoyen
+        // ── Email de confirmation au citoyen ──────────────────────────────
         $emailCitoyen = $request->request->get('emailCitoyen');
         if ($emailCitoyen) {
             try {
@@ -795,25 +798,32 @@ $uploadDir = $this->getParameter('kernel.project_dir')
             }
         }
 
-        // Notifier tous les administrateurs (ou utilisateurs avec rôle Admin)
-$admins = $this->em->getRepository(Utilisateur::class)
-    ->createQueryBuilder('u')
-    ->where('u.typeUtilisateur = :type')
-    ->andWhere('u.estActif = true')
-    ->setParameter('type', 'Administrateur')
-    ->getQuery()->getResult();
+        // ── Notifier les administrateurs ──────────────────────────────────
+        try {
+            $admins = $this->em->getRepository(Utilisateur::class)
+                ->createQueryBuilder('u')
+                ->where('u.typeUtilisateur = :type')
+                ->andWhere('u.estActif = true')
+                ->andWhere('u.estSupprime = false')
+                ->setParameter('type', 'Administrateur')
+                ->getQuery()->getResult();
 
-foreach ($admins as $admin) {
-    $notif = new Notification();
-    $notif->setUtilisateur($admin)
-          ->setTitre("Nouveau dossier citoyen")
-          ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()}.")
-          ->setType('INFO')
-          ->setDossierId($dossier->getId())
-          ->setNumeroDossier($dossier->getNumero());
-    $this->em->persist($notif);
-}
-$this->em->flush();
+            foreach ($admins as $admin) {
+                $notif = new Notification();
+                $notif->setUtilisateur($admin)
+                      ->setTitre('Nouveau dossier citoyen')
+                      ->setMessage("Le dossier {$dossier->getNumero()} a été déposé par {$dossier->getNomCitoyen()}.")
+                      ->setType('INFO')
+                      ->setDossierId($dossier->getId())
+                      ->setNumeroDossier($dossier->getNumero());
+                $this->em->persist($notif);
+            }
+            if (!empty($admins)) {
+                $this->em->flush();
+            }
+        } catch (\Throwable $e) {
+            // Ne pas bloquer si les notifications échouent
+        }
 
         return $this->json([
             'numeroDossier' => $dossier->getNumero(),

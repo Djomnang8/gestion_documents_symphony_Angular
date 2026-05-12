@@ -134,7 +134,7 @@ export class Depot implements OnInit {
     formData.append('description',      val.description);
     formData.append('serviceId',        serviceId.toString());
     for (let i = 0; i < this.fichiersSelectionnes.length; i++) {
-      formData.append('fichiers', this.fichiersSelectionnes[i]);
+      formData.append('fichiers[]', this.fichiersSelectionnes[i]);
     }
 
     // ✅ URL correcte : /api/dossiers/public/depot
