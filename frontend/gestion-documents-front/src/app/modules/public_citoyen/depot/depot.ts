@@ -138,8 +138,8 @@ export class Depot implements OnInit {
       formData.append('fichiers[]', this.fichiersSelectionnes[i]);
     }
 
-    
-    this.http.post<DepotResponse>(`${environment.apiUrl}/api/public/depot`, formData)
+    // ✅ URL correcte : /api/dossiers/public/depot
+    this.http.post<DepotResponse>(`${environment.apiUrl}/api/dossiers/public/depot`, formData)
       .pipe(finalize(() => this.ngZone.run(() => { this.enCours = false; this.cdr.detectChanges(); })))
       .subscribe({
         next:  (res) => this.ngZone.run(() => { this.succes = true; this.numeroDossier = (res.numerosDossiers?.join(', ') || res.numeroDossier); this.cdr.detectChanges(); }),
